@@ -5,20 +5,22 @@ import androidx.appcompat.app.AppCompatDelegate
 
 class App : Application() {
 
-    // Repository created once, eagerly, in onCreate — no lazy, no race condition.
     lateinit var rulesRepository: RulesRepository
         private set
 
     override fun onCreate() {
         super.onCreate()
-        // Plain file I/O — safe on main thread (< 1 ms on first run)
+
+        // Install crash handler before anything else — shows stack trace on screen
+        Thread.setDefaultUncaughtExceptionHandler(CrashHandler(applicationContext))
+
         rulesRepository = RulesRepository.create(this)
         applyTheme(AppSettings(this).theme)
     }
 
     companion object {
-        fun get(app: android.content.Context): App =
-            app.applicationContext as App
+        fun get(context: android.content.Context): App =
+            context.applicationContext as App
 
         fun applyTheme(theme: String) {
             AppCompatDelegate.setDefaultNightMode(
