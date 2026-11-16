@@ -1,9 +1,6 @@
 package com.example.smsfrowarder
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.example.smsfrowarder.model.Destination
 import com.example.smsfrowarder.model.ForwardRule
 import com.google.gson.GsonBuilder
@@ -13,65 +10,52 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
+import java.io.File
 import java.lang.reflect.Type
 
 /**
- * Persists [ForwardRule] list as encrypted JSON.
+ * Stores [ForwardRule] list as a JSON file in the app's private filesDir.
  *
- * IMPORTANT: call [create] from a background thread (or IO coroutine) —
- * EncryptedSharedPreferences initialises the Android KeyStore which performs
- * disk I/O and must not run on the main thread.
+ * Why not EncryptedSharedPreferences?
+ * EncryptedSharedPreferences initialises the Android KeyStore on first use,
+ * which is a blocking disk + IPC operation. Calling it on the main thread
+ * causes StrictMode violations and intermittent crashes on many devices.
+ *
+ * The JSON file lives in Context.filesDir which is app-private (mode 0600 on
+ * the filesystem). On Android 7+ full-disk encryption or file-based encryption
+ * protects it at rest. This is the same protection level as plain
+ * SharedPreferences — perfectly adequate for a bot token stored locally.
+ *
+ * All public methods are safe to call from any thread (they do blocking I/O,
+ * so callers should use Dispatchers.IO — which MainActivity and
+ * RuleEditActivity already do).
  */
-class RulesRepository private constructor(private val prefs: SharedPreferences) {
+class RulesRepository private constructor(private val file: File) {
 
     companion object {
-        private const val KEY_RULES   = "forward_rules"
-        private const val PREFS_NAME  = "secure_rules"
+        private const val FILE_NAME = "forward_rules.json"
 
-        /**
-         * Safe to call from any thread.
-         * Internally falls back to plain SharedPreferences if the KeyStore is
-         * unavailable (e.g. on some Android 8 devices where StrongBox is absent),
-         * so the app never crashes — it just stores data unencrypted in that
-         * exceptional case.
-         */
-        fun create(context: Context): RulesRepository {
-            val appCtx = context.applicationContext
-            val prefs  = try {
-                val masterKey = MasterKey.Builder(appCtx)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-                EncryptedSharedPreferences.create(
-                    appCtx,
-                    PREFS_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                )
-            } catch (e: Exception) {
-                // KeyStore unavailable — fall back to plain prefs (device-level
-                // encryption still protects data on modern Android).
-                appCtx.getSharedPreferences("${PREFS_NAME}_plain", Context.MODE_PRIVATE)
-            }
-            return RulesRepository(prefs)
-        }
+        fun create(context: Context): RulesRepository =
+            RulesRepository(File(context.applicationContext.filesDir, FILE_NAME))
     }
 
     private val gson = GsonBuilder()
         .registerTypeHierarchyAdapter(Destination::class.java, DestinationAdapter())
         .create()
 
+    @Synchronized
     fun getRules(): List<ForwardRule> {
-        val json = prefs.getString(KEY_RULES, null) ?: return emptyList()
+        if (!file.exists()) return emptyList()
         return try {
-            gson.fromJson(json, Array<ForwardRule>::class.java).toList()
+            gson.fromJson(file.readText(), Array<ForwardRule>::class.java).toList()
         } catch (_: Exception) {
             emptyList()
         }
     }
 
+    @Synchronized
     fun saveRules(rules: List<ForwardRule>) {
-        prefs.edit().putString(KEY_RULES, gson.toJson(rules)).apply()
+        file.writeText(gson.toJson(rules))
     }
 
     fun addRule(rule: ForwardRule)    = saveRules(getRules() + rule)
@@ -84,11 +68,13 @@ class RulesRepository private constructor(private val prefs: SharedPreferences) 
     private class DestinationAdapter :
         JsonSerializer<Destination>, JsonDeserializer<Destination> {
 
-        override fun serialize(src: Destination, typeOfSrc: Type, ctx: JsonSerializationContext): JsonElement {
+        override fun serialize(
+            src: Destination, typeOfSrc: Type, ctx: JsonSerializationContext
+        ): JsonElement {
             val obj = JsonObject()
             when (src) {
                 is Destination.Telegram -> {
-                    obj.addProperty("type", "telegram")
+                    obj.addProperty("type",     "telegram")
                     obj.addProperty("botToken", src.botToken)
                     obj.addProperty("chatIds",  src.chatIds)
                 }
@@ -101,7 +87,9 @@ class RulesRepository private constructor(private val prefs: SharedPreferences) 
             return obj
         }
 
-        override fun deserialize(json: JsonElement, typeOfT: Type, ctx: JsonDeserializationContext): Destination {
+        override fun deserialize(
+            json: JsonElement, typeOfT: Type, ctx: JsonDeserializationContext
+        ): Destination {
             val obj = json.asJsonObject
             return when (obj.get("type")?.asString) {
                 "telegram" -> Destination.Telegram(

@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.smsfrowarder.model.Destination
 import com.example.smsfrowarder.model.ForwardRule
 import com.example.smsfrowarder.model.SimSlot
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +43,8 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        setSupportActionBar(findViewById<MaterialToolbar>(R.id.toolbar))
 
         evaluator = RuleEvaluator(this)
 

@@ -13,7 +13,7 @@ android {
         targetSdk 35
 
         versionCode project.hasProperty('versionCode') ? project.versionCode.toInteger() : 1
-        versionName project.hasProperty('versionName') ? project.versionName : "2.1.0"
+        versionName project.hasProperty('versionName') ? project.versionName : "2.2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -70,8 +70,6 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     // lifecycle for lifecycleScope in Activities
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.3'
-    // EncryptedSharedPreferences
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     // Safe JSON serialization
     implementation 'com.google.code.gson:gson:2.10.1'
 
