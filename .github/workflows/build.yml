@@ -82,11 +82,11 @@ jobs:
           body: |
             ## SMS Forwarder v${{ steps.version.outputs.VERSION_NAME }}
 
-            ### نصب
-            فایل APK را دانلود و روی گوشی اندروید نصب کنید.
+            ### Install
+            Download the APK file and install it on your Android device.
 
-            ### تغییرات
-            برای مشاهده تغییرات به [Commits](../../commits/${{ github.ref_name }}) مراجعه کنید.
+            ### Changes
+            See [Commits](../../commits/${{ github.ref_name }}) for full changelog.
           files: artifacts/*.apk
           draft: false
           prerelease: false
