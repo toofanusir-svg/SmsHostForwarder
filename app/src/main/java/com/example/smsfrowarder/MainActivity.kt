@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.smsfrowarder.model.Destination
@@ -22,40 +23,46 @@ import com.example.smsfrowarder.model.ForwardRule
 import com.example.smsfrowarder.model.SimSlot
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.switchmaterial.SwitchMaterial
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : BaseActivity() {
 
-    private lateinit var rulesRepository: RulesRepository
     private lateinit var evaluator: RuleEvaluator
-    private lateinit var adapter: RulesAdapter
+    private lateinit var adapter:   RulesAdapter
+
+    // Repository lives in App — already initialised on IO thread
+    private val repo get() = App.get(this).rulesRepository
 
     private val editRuleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) {
-        // Refresh list when returning from add/edit screen
-        refreshList()
-    }
+    ) { refreshList() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        rulesRepository = RulesRepository.create(this)
-        evaluator       = RuleEvaluator(this)
+        evaluator = RuleEvaluator(this)
 
-        val recycler = findViewById<RecyclerView>(R.id.rulesRecycler)
         adapter = RulesAdapter(
             onEdit   = { rule -> RuleEditActivity.start(this, editRuleLauncher, rule.id) },
             onDelete = { rule -> confirmDelete(rule) },
-            onToggle = { rule, enabled -> rulesRepository.setEnabled(rule.id, enabled); refreshList() }
+            onToggle = { rule, enabled ->
+                lifecycleScope.launch(Dispatchers.IO) {
+                    repo.setEnabled(rule.id, enabled)
+                    refreshList()
+                }
+            }
         )
+
+        val recycler = findViewById<RecyclerView>(R.id.rulesRecycler)
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
 
         findViewById<FloatingActionButton>(R.id.fabAdd).setOnClickListener {
             RuleEditActivity.start(this, editRuleLauncher, null)
         }
-
         findViewById<View>(R.id.btnStartService).setOnClickListener {
             SmsService.start(this)
         }
@@ -64,7 +71,6 @@ class MainActivity : BaseActivity() {
         }
 
         requestPermissions()
-        warnIfMultiSimUnavailable()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -83,35 +89,48 @@ class MainActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         refreshList()
+        warnIfMultiSimUnavailable()
     }
 
+    // -------------------------------------------------------------------------
+    // List refresh — always on IO then post to main
+    // -------------------------------------------------------------------------
+
     private fun refreshList() {
-        adapter.submitList(rulesRepository.getRules())
+        lifecycleScope.launch(Dispatchers.IO) {
+            val rules = repo.getRules()
+            withContext(Dispatchers.Main) {
+                adapter.submitList(rules)
+            }
+        }
     }
+
+    // -------------------------------------------------------------------------
 
     private fun confirmDelete(rule: ForwardRule) {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.confirm_delete_title))
             .setMessage(getString(R.string.confirm_delete_msg, rule.name))
             .setPositiveButton(R.string.btn_delete) { _, _ ->
-                rulesRepository.deleteRule(rule.id)
-                refreshList()
+                lifecycleScope.launch(Dispatchers.IO) {
+                    repo.deleteRule(rule.id)
+                    refreshList()
+                }
             }
             .setNegativeButton(R.string.btn_cancel, null)
             .show()
     }
 
-    // -------------------------------------------------------------------------
-    // Multi-SIM warning
-    // -------------------------------------------------------------------------
-
     private fun warnIfMultiSimUnavailable() {
-        // Only warn if the user has at least one SIM-specific rule
-        val hasSimSpecificRule = rulesRepository.getRules().any {
-            it.simSlot == SimSlot.SIM_1 || it.simSlot == SimSlot.SIM_2
-        }
-        if (hasSimSpecificRule && !evaluator.isMultiSimDetectionAvailable()) {
-            Toast.makeText(this, getString(R.string.warn_multisim), Toast.LENGTH_LONG).show()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val hasSimRule = repo.getRules().any {
+                it.simSlot == SimSlot.SIM_1 || it.simSlot == SimSlot.SIM_2
+            }
+            if (hasSimRule && !evaluator.isMultiSimDetectionAvailable()) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, getString(R.string.warn_multisim), Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -122,8 +141,7 @@ class MainActivity : BaseActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        val denied = results.filterValues { !it }.keys
-        if (denied.isNotEmpty()) {
+        if (results.values.any { !it }) {
             Toast.makeText(this, getString(R.string.warn_permissions), Toast.LENGTH_LONG).show()
         }
     }
@@ -146,7 +164,7 @@ class MainActivity : BaseActivity() {
     }
 
     // =========================================================================
-    // RecyclerView adapter
+    // RecyclerView adapter (inner — has access to getString via outer Activity)
     // =========================================================================
 
     private inner class RulesAdapter(
@@ -162,20 +180,15 @@ class MainActivity : BaseActivity() {
             notifyDataSetChanged()
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_rule, parent, false)
-            return VH(v)
-        }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
+            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_rule, parent, false))
 
-        override fun onBindViewHolder(holder: VH, position: Int) =
-            holder.bind(items[position])
-
+        override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(items[position])
         override fun getItemCount() = items.size
 
         inner class VH(view: View) : RecyclerView.ViewHolder(view) {
-            private val tvName:    TextView      = view.findViewById(R.id.tvRuleName)
-            private val tvSummary: TextView      = view.findViewById(R.id.tvRuleSummary)
+            private val tvName:    TextView       = view.findViewById(R.id.tvRuleName)
+            private val tvSummary: TextView       = view.findViewById(R.id.tvRuleSummary)
             private val swEnabled: SwitchMaterial = view.findViewById(R.id.swEnabled)
 
             fun bind(rule: ForwardRule) {
@@ -191,14 +204,14 @@ class MainActivity : BaseActivity() {
             }
 
             private fun buildSummary(rule: ForwardRule): String {
-                val sim    = when (rule.simSlot) {
+                val sim = when (rule.simSlot) {
                     SimSlot.SIM_1 -> getString(R.string.sim_1)
                     SimSlot.SIM_2 -> getString(R.string.sim_2)
                     SimSlot.ANY   -> getString(R.string.sim_any)
                 }
                 val sender = if (rule.senderFilter.isBlank() || rule.senderFilter == "*")
                     getString(R.string.label_any_sender) else rule.senderFilter
-                val dest   = when (val d = rule.destination) {
+                val dest = when (val d = rule.destination) {
                     is Destination.Telegram -> "Telegram (${d.chatIds})"
                     is Destination.Webhook  -> "Webhook (${d.url.take(30)}…)"
                 }

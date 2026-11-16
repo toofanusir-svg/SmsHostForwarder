@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- API 34+: foreground service data sync type -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        android:minSdkVersion="34" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -21,9 +24,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SmsFrowarder">
 
+        <!--
+            foregroundServiceType is only valid on API 29+.
+            On older devices the attribute is simply ignored.
+        -->
         <service
             android:name=".SmsService"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
 
         <receiver
             android:name=".StartupReceiver"

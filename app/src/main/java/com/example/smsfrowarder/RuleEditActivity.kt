@@ -6,53 +6,46 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
+import androidx.lifecycle.lifecycleScope
 import com.example.smsfrowarder.model.Destination
 import com.example.smsfrowarder.model.ForwardRule
 import com.example.smsfrowarder.model.SimSlot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-/**
- * Add or edit a single [ForwardRule].
- * Pass [EXTRA_RULE_ID] to edit an existing rule; omit it to create a new one.
- */
 class RuleEditActivity : BaseActivity() {
 
     companion object {
         private const val EXTRA_RULE_ID = "rule_id"
 
-        fun start(
-            context: Context,
-            launcher: ActivityResultLauncher<Intent>,
-            ruleId: String?
-        ) {
-            val intent = Intent(context, RuleEditActivity::class.java).apply {
+        fun start(context: Context, launcher: ActivityResultLauncher<Intent>, ruleId: String?) {
+            launcher.launch(Intent(context, RuleEditActivity::class.java).apply {
                 ruleId?.let { putExtra(EXTRA_RULE_ID, it) }
-            }
-            launcher.launch(intent)
+            })
         }
     }
 
-    private lateinit var rulesRepository: RulesRepository
+    private val repo get() = App.get(this).rulesRepository
     private var existingRule: ForwardRule? = null
 
-    // Views
-    private lateinit var etName:        EditText
-    private lateinit var spinnerSim:    Spinner
-    private lateinit var etSender:      EditText
-    private lateinit var rgDestType:    RadioGroup
-    private lateinit var rbTelegram:    RadioButton
-    private lateinit var rbWebhook:     RadioButton
+    private lateinit var etName:         EditText
+    private lateinit var spinnerSim:     Spinner
+    private lateinit var etSender:       EditText
+    private lateinit var rgDestType:     RadioGroup
+    private lateinit var rbTelegram:     RadioButton
+    private lateinit var rbWebhook:      RadioButton
     private lateinit var layoutTelegram: View
-    private lateinit var etBotToken:    EditText
-    private lateinit var etChatIds:     EditText
-    private lateinit var layoutWebhook: View
-    private lateinit var etWebhookUrl:  EditText
-    private lateinit var etAuthHeader:  EditText
+    private lateinit var etBotToken:     EditText
+    private lateinit var etChatIds:      EditText
+    private lateinit var layoutWebhook:  View
+    private lateinit var etWebhookUrl:   EditText
+    private lateinit var etAuthHeader:   EditText
+    private lateinit var btnSave:        View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_rule_edit)
-
-        rulesRepository = RulesRepository.create(this)
 
         bindViews()
         setupSimSpinner()
@@ -60,18 +53,22 @@ class RuleEditActivity : BaseActivity() {
 
         val ruleId = intent.getStringExtra(EXTRA_RULE_ID)
         if (ruleId != null) {
-            existingRule = rulesRepository.getRules().find { it.id == ruleId }
-            existingRule?.let { populateForm(it) }
             title = getString(R.string.title_edit_rule)
+            // Load rule on IO, populate form on main
+            lifecycleScope.launch(Dispatchers.IO) {
+                val rule = repo.getRules().find { it.id == ruleId }
+                withContext(Dispatchers.Main) {
+                    existingRule = rule
+                    rule?.let { populateForm(it) }
+                }
+            }
         } else {
             title = getString(R.string.title_new_rule)
         }
 
-        findViewById<View>(R.id.btnSave).setOnClickListener { save() }
+        btnSave.setOnClickListener { save() }
         findViewById<View>(R.id.btnCancel).setOnClickListener { finish() }
     }
-
-    // -------------------------------------------------------------------------
 
     private fun bindViews() {
         etName         = findViewById(R.id.etRuleName)
@@ -86,26 +83,22 @@ class RuleEditActivity : BaseActivity() {
         layoutWebhook  = findViewById(R.id.layoutWebhook)
         etWebhookUrl   = findViewById(R.id.etWebhookUrl)
         etAuthHeader   = findViewById(R.id.etAuthHeader)
+        btnSave        = findViewById(R.id.btnSave)
     }
 
     private fun setupSimSpinner() {
-        val options = arrayOf(
-            getString(R.string.sim_any),
-            getString(R.string.sim_1),
-            getString(R.string.sim_2)
-        )
+        val options = arrayOf(getString(R.string.sim_any), getString(R.string.sim_1), getString(R.string.sim_2))
         spinnerSim.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options).also {
             it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
     }
 
     private fun setupDestinationToggle() {
-        rgDestType.setOnCheckedChangeListener { _, checkedId ->
-            layoutTelegram.visibility = if (checkedId == R.id.rbTelegram) View.VISIBLE else View.GONE
-            layoutWebhook.visibility  = if (checkedId == R.id.rbWebhook)  View.VISIBLE else View.GONE
+        rgDestType.setOnCheckedChangeListener { _, id ->
+            layoutTelegram.visibility = if (id == R.id.rbTelegram) View.VISIBLE else View.GONE
+            layoutWebhook.visibility  = if (id == R.id.rbWebhook)  View.VISIBLE else View.GONE
         }
-        // Default: Telegram
-        rbTelegram.isChecked    = true
+        rbTelegram.isChecked      = true
         layoutTelegram.visibility = View.VISIBLE
         layoutWebhook.visibility  = View.GONE
     }
@@ -114,22 +107,20 @@ class RuleEditActivity : BaseActivity() {
         etName.setText(rule.name)
         etSender.setText(rule.senderFilter)
         spinnerSim.setSelection(when (rule.simSlot) {
-            SimSlot.ANY   -> 0
-            SimSlot.SIM_1 -> 1
-            SimSlot.SIM_2 -> 2
+            SimSlot.ANY   -> 0; SimSlot.SIM_1 -> 1; SimSlot.SIM_2 -> 2
         })
-        when (val dest = rule.destination) {
+        when (val d = rule.destination) {
             is Destination.Telegram -> {
-                rbTelegram.isChecked = true
-                etBotToken.setText(dest.botToken)
-                etChatIds.setText(dest.chatIds)
+                rbTelegram.isChecked      = true
+                etBotToken.setText(d.botToken)
+                etChatIds.setText(d.chatIds)
                 layoutTelegram.visibility = View.VISIBLE
                 layoutWebhook.visibility  = View.GONE
             }
             is Destination.Webhook -> {
-                rbWebhook.isChecked = true
-                etWebhookUrl.setText(dest.url)
-                etAuthHeader.setText(dest.authHeader)
+                rbWebhook.isChecked       = true
+                etWebhookUrl.setText(d.url)
+                etAuthHeader.setText(d.authHeader)
                 layoutTelegram.visibility = View.GONE
                 layoutWebhook.visibility  = View.VISIBLE
             }
@@ -140,9 +131,7 @@ class RuleEditActivity : BaseActivity() {
         val name   = etName.text.toString().trim()
         val sender = etSender.text.toString().trim().ifEmpty { "*" }
         val sim    = when (spinnerSim.selectedItemPosition) {
-            1    -> SimSlot.SIM_1
-            2    -> SimSlot.SIM_2
-            else -> SimSlot.ANY
+            1 -> SimSlot.SIM_1; 2 -> SimSlot.SIM_2; else -> SimSlot.ANY
         }
 
         val destination: Destination = if (rbTelegram.isChecked) {
@@ -162,22 +151,18 @@ class RuleEditActivity : BaseActivity() {
             Destination.Webhook(url, etAuthHeader.text.toString().trim())
         }
 
-        val rule = existingRule?.copy(
-            name         = name,
-            simSlot      = sim,
-            senderFilter = sender,
-            destination  = destination
-        ) ?: ForwardRule(
-            name         = name,
-            simSlot      = sim,
-            senderFilter = sender,
-            destination  = destination
-        )
+        val rule = existingRule?.copy(name = name, simSlot = sim, senderFilter = sender, destination = destination)
+            ?: ForwardRule(name = name, simSlot = sim, senderFilter = sender, destination = destination)
 
-        if (existingRule != null) rulesRepository.updateRule(rule)
-        else rulesRepository.addRule(rule)
+        // Disable button to prevent double-tap
+        btnSave.isEnabled = false
 
-        Toast.makeText(this, getString(R.string.rule_saved), Toast.LENGTH_SHORT).show()
-        finish()
+        lifecycleScope.launch(Dispatchers.IO) {
+            if (existingRule != null) repo.updateRule(rule) else repo.addRule(rule)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@RuleEditActivity, getString(R.string.rule_saved), Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
     }
 }

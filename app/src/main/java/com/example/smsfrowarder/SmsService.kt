@@ -16,7 +16,7 @@ import androidx.core.app.NotificationCompat
 class SmsService : Service() {
 
     companion object {
-        private const val CHANNEL_ID     = "sms_forwarder_channel"
+        private const val CHANNEL_ID      = "sms_forwarder_channel"
         private const val NOTIFICATION_ID = 1001
 
         fun start(context: Context) {
@@ -48,20 +48,24 @@ class SmsService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "SMS Forwarder",
-                NotificationManager.IMPORTANCE_LOW  // LOW = no sound, still shows in tray
+                NotificationManager.IMPORTANCE_LOW
             )
-            getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 
-        // Tap the notification → open Rules list
+        // FLAG_IMMUTABLE requires API 23 — use FLAG_UPDATE_CURRENT on older APIs
+        val pendingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        else
+            PendingIntent.FLAG_UPDATE_CURRENT
+
         val openIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE
+            pendingFlags
         )
 
-        val notification = androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(getString(R.string.notif_title))
             .setContentText(getString(R.string.notif_text))
@@ -78,16 +82,26 @@ class SmsService : Service() {
             unregisterReceiver(it)
         }
 
-        val rulesRepo  = RulesRepository.create(this)
+        // Repository is already warm in App — this call is instant on IO path
+        val rulesRepo  = App.get(this).rulesRepository
         val evaluator  = RuleEvaluator(this)
         val dispatcher = ForwardDispatcher()
 
         smsReceiver = SMSReceiver(rulesRepo, evaluator, dispatcher)
-        registerReceiver(smsReceiver, IntentFilter().apply {
+
+        val filter = IntentFilter().apply {
             addAction(SMS_RECEIVED_ACTION)
             addAction(ACTION_PHONE_STATE_CHANGED)
             addAction(ACTION_BATTERY_LOW)
-        })
+        }
+
+        // Android 14+ requires RECEIVER_EXPORTED or RECEIVER_NOT_EXPORTED flag
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(smsReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(smsReceiver, filter)
+        }
     }
 
     override fun onDestroy() {
@@ -97,6 +111,7 @@ class SmsService : Service() {
             unregisterReceiver(it)
         }
         smsReceiver = null
+        @Suppress("DEPRECATION")
         stopForeground(true)
     }
 }
