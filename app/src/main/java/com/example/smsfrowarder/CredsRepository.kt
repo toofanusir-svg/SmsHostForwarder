@@ -1,21 +1,6 @@
 package com.example.smsfrowarder
 
-import android.content.SharedPreferences
-import com.example.smsfrowarder.MainActivity.Companion.CHAT_IDS_ARG
-import com.example.smsfrowarder.MainActivity.Companion.TELEGRAM_TOKEN_ARG
-
-class CredsRepository(private val sharedPreferences: SharedPreferences) {
-
-    var telegramToken: String?
-        get() = sharedPreferences.getString(TELEGRAM_TOKEN_ARG, null)
-        set(value) {
-            sharedPreferences.edit().putString(TELEGRAM_TOKEN_ARG, value).commit()
-        }
-
-    var chatIds: String?
-        get() = sharedPreferences.getString(CHAT_IDS_ARG, null)
-        set(value) {
-            sharedPreferences.edit().putString(CHAT_IDS_ARG, value).commit()
-        }
-
-}
+// CredsRepository is superseded by RulesRepository.
+// Each ForwardRule now carries its own destination credentials (bot token /
+// webhook URL) and is stored encrypted via RulesRepository.
+// This file is kept as a placeholder to avoid breaking any external references.

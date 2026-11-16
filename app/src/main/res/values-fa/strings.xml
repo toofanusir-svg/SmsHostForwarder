@@ -1,0 +1,54 @@
+<resources>
+    <string name="app_name">ارسال‌کننده پیامک</string>
+
+    <!-- MainActivity -->
+    <string name="title_rules">قوانین ارسال</string>
+    <string name="btn_start">شروع</string>
+    <string name="btn_stop">توقف</string>
+    <string name="menu_settings">تنظیمات</string>
+    <string name="confirm_delete_title">حذف قانون</string>
+    <string name="confirm_delete_msg">حذف \"%s\"؟</string>
+    <string name="btn_delete">حذف</string>
+    <string name="btn_cancel">انصراف</string>
+    <string name="warn_multisim">⚠️ این دستگاه از تشخیص چند سیم‌کارت پشتیبانی نمی‌کند. قوانین مخصوص سیم‌کارت اجرا نخواهند شد.</string>
+    <string name="warn_permissions">برخی مجوزها رد شدند؛ ممکن است برنامه درست کار نکند.</string>
+    <string name="label_unnamed_rule">قانون بدون نام</string>
+    <string name="label_any_sender">هر فرستنده‌ای</string>
+
+    <!-- SIM -->
+    <string name="sim_any">هر سیم‌کارت</string>
+    <string name="sim_1">سیم‌کارت اول</string>
+    <string name="sim_2">سیم‌کارت دوم</string>
+
+    <!-- RuleEditActivity -->
+    <string name="title_new_rule">قانون جدید</string>
+    <string name="title_edit_rule">ویرایش قانون</string>
+    <string name="hint_rule_name">نام قانون</string>
+    <string name="label_sim_card">سیم‌کارت</string>
+    <string name="hint_sender">شماره فرستنده (* برای همه)</string>
+    <string name="label_destination">مقصد</string>
+    <string name="rb_telegram">ربات تلگرام</string>
+    <string name="rb_webhook">وب‌هوک</string>
+    <string name="hint_bot_token">توکن ربات</string>
+    <string name="hint_chat_ids">شناسه چت‌ها (با کاما جدا کنید)</string>
+    <string name="hint_webhook_url">آدرس وب‌هوک (https://…)</string>
+    <string name="hint_auth_header">هدر Authorization (اختیاری)</string>
+    <string name="btn_save">ذخیره</string>
+    <string name="error_token_chatid_required">توکن ربات و شناسه چت الزامی است</string>
+    <string name="error_url_required">یک آدرس معتبر وارد کنید</string>
+    <string name="rule_saved">قانون ذخیره شد</string>
+
+    <!-- SettingsActivity -->
+    <string name="title_settings">تنظیمات</string>
+    <string name="label_language">زبان</string>
+    <string name="rb_lang_en">English</string>
+    <string name="rb_lang_fa">فارسی</string>
+    <string name="label_theme">تم</string>
+    <string name="rb_theme_light">روشن</string>
+    <string name="rb_theme_dark">تاریک</string>
+    <string name="btn_apply">اعمال</string>
+
+    <!-- Notification -->
+    <string name="notif_title">ارسال‌کننده پیامک فعال است</string>
+    <string name="notif_text">قوانین ارسال در حال اجرا هستند</string>
+</resources>

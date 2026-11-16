@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Keystore — never commit to source control
+*.jks
+*.keystore
+release.jks

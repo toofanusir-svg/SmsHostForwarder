@@ -11,121 +11,126 @@ import android.provider.CallLog
 import android.provider.CallLog.Calls.MISSED_TYPE
 import android.provider.Telephony
 import android.telephony.*
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import java.security.SecureRandom
-import java.security.cert.CertificateException
-import java.security.cert.X509Certificate
-import java.util.*
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSession
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
+import com.example.smsfrowarder.model.ForwardRule
+import com.example.smsfrowarder.model.SimSlot
 import kotlinx.coroutines.*
-import java.lang.Exception
+import java.util.*
 
 class SMSReceiver(
-    private val telegramToken: String,
-    private val telegramChatIds: List<String>
+    private val rulesRepository: RulesRepository,
+    private val evaluator: RuleEvaluator,
+    private val dispatcher: ForwardDispatcher
 ) : BroadcastReceiver() {
 
     companion object {
-
         private const val MAX_ATTEMPT_COUNT = 10
+        /** Intent extra key carrying the subscription (SIM) ID on multi-SIM devices. */
+        private const val EXTRA_SUBSCRIPTION_ID = "android.telephony.extra.SUBSCRIPTION_INDEX"
     }
-
-    private var previousCallState = -1
-    private var legacyPhoneNumber: String? = null
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    private val okhttpClient by lazy {
-        val trustAllCerts = arrayOf<TrustManager>(
-            object : X509TrustManager {
-                @Throws(CertificateException::class)
-                override fun checkClientTrusted(
-                    chain: Array<X509Certificate?>?,
-                    authType: String?
-                ) {
-                }
+    // Keep a reference to unregister on destroy (fix: TelephonyCallback leak).
+    private var telephonyCallback: TelephonyCallback? = null
+    private var telephonyManager: TelephonyManager? = null
+    private var previousCallState = -1
+    private var legacyPhoneNumber: String? = null
 
-                @Throws(CertificateException::class)
-                override fun checkServerTrusted(
-                    chain: Array<X509Certificate?>?,
-                    authType: String?
-                ) {
-                }
-
-                override fun getAcceptedIssuers(): Array<X509Certificate?> {
-                    return arrayOfNulls<X509Certificate>(0)
-                }
-            }
-        )
-
-        val sslContext = SSLContext.getInstance("TLS")
-        sslContext.init(null, trustAllCerts, SecureRandom())
-        OkHttpClient.Builder()
-            .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
-            .hostnameVerifier({ hostname: String?, session: SSLSession? -> true })
-            .build()
-    }
-
+    // -------------------------------------------------------------------------
+    // BroadcastReceiver
+    // -------------------------------------------------------------------------
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
-                val telephonyManager =
-                    context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    telephonyManager.registerTelephonyCallback(
-                        context.mainExecutor,
-                        object : TelephonyCallback(), TelephonyCallback.CallStateListener {
-
-                            override fun onCallStateChanged(state: Int) {
-                                if (TelephonyManager.CALL_STATE_IDLE == state && previousCallState == TelephonyManager.CALL_STATE_RINGING)
-                                    readCallLogs(context)
-                                previousCallState = state
-                            }
-                        })
-                } else {
-                    telephonyManager.listen(object : PhoneStateListener() {
-                        override fun onCallStateChanged(state: Int, phoneNumber: String?) {
-                            if (TelephonyManager.CALL_STATE_IDLE == state && previousCallState == TelephonyManager.CALL_STATE_RINGING)
-                                sendMessages("Missed call from `$legacyPhoneNumber`")
-                            legacyPhoneNumber = phoneNumber ?: legacyPhoneNumber
-                            previousCallState = state
-                        }
-                    }, PhoneStateListener.LISTEN_CALL_STATE)
-                }
-            }
             Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
-                processSMS(Telephony.Sms.Intents.getMessagesFromIntent(intent))
+                val subId = intent.getIntExtra(EXTRA_SUBSCRIPTION_ID, -1)
+                val slot  = evaluator.resolveSlot(subId)
+                processSMS(Telephony.Sms.Intents.getMessagesFromIntent(intent), slot)
             }
+
+            TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
+                registerCallStateListener(context)
+            }
+
             ACTION_BATTERY_LOW -> {
-                val batteryManager =
-                    context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-                val batteryLevel =
-                    batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                sendMessages("Low battery level! $batteryLevel% charge left")
+                val bm = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+                val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                val rules = rulesRepository.getRules().filter { it.enabled }
+                retryDispatch("Low battery level! $level% charge left", rules)
             }
         }
     }
 
-    private fun processSMS(smsMessages: Array<SmsMessage>) {
-        smsMessages.firstOrNull()?.let { firstSms ->
-            val phoneNumber = firstSms.displayOriginatingAddress
-            val messageText = smsMessages.joinToString("") { it.displayMessageBody }.highlightVerificationCodeInSms()
-
-            val date = Date(firstSms.timestampMillis).toString()
-            sendMessages(
-                """
-            From *$phoneNumber* at $date
-
-            $messageText
-        """.trimIndent()
-            )
+    /** Unregisters the TelephonyCallback and cancels the coroutine scope. */
+    fun release() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            telephonyCallback?.let { telephonyManager?.unregisterTelephonyCallback(it) }
         }
+        telephonyCallback = null
+        telephonyManager  = null
+        scope.cancel()
+    }
 
+    // -------------------------------------------------------------------------
+    // SMS
+    // -------------------------------------------------------------------------
+
+    private fun processSMS(messages: Array<SmsMessage>, slot: SimSlot?) {
+        messages.firstOrNull()?.let { first ->
+            val sender  = first.displayOriginatingAddress.orEmpty()
+            val body    = messages.joinToString("") { it.displayMessageBody }.highlightCode()
+            val date    = Date(first.timestampMillis)
+            val simTag  = when (slot) {
+                SimSlot.SIM_1 -> "SIM 1"
+                SimSlot.SIM_2 -> "SIM 2"
+                SimSlot.ANY, null -> "SIM ?"
+            }
+
+            val text = "📱 *$simTag* — From *${escapeMarkdown(sender)}* at $date\n\n$body"
+
+            val matched = evaluator.matching(rulesRepository.getRules(), sender, slot)
+            if (matched.isNotEmpty()) {
+                retryDispatch(text, matched)
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Call log
+    // -------------------------------------------------------------------------
+
+    private fun registerCallStateListener(context: Context) {
+        val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        telephonyManager = tm
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            telephonyCallback?.let { tm.unregisterTelephonyCallback(it) }
+            val cb = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
+                override fun onCallStateChanged(state: Int) {
+                    if (state == TelephonyManager.CALL_STATE_IDLE &&
+                        previousCallState == TelephonyManager.CALL_STATE_RINGING
+                    ) readCallLogs(context)
+                    previousCallState = state
+                }
+            }
+            telephonyCallback = cb
+            tm.registerTelephonyCallback(context.mainExecutor, cb)
+        } else {
+            @Suppress("DEPRECATION")
+            tm.listen(object : PhoneStateListener() {
+                @Deprecated("Deprecated in API 31")
+                override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+                    if (state == TelephonyManager.CALL_STATE_IDLE &&
+                        previousCallState == TelephonyManager.CALL_STATE_RINGING
+                    ) {
+                        val rules = rulesRepository.getRules().filter { it.enabled }
+                        retryDispatch("📞 Missed call from `${escapeMarkdown(legacyPhoneNumber)}`", rules)
+                    }
+                    legacyPhoneNumber = phoneNumber ?: legacyPhoneNumber
+                    previousCallState = state
+                }
+            }, PhoneStateListener.LISTEN_CALL_STATE)
+        }
     }
 
     @SuppressLint("Range", "MissingPermission")
@@ -134,74 +139,66 @@ class SMSReceiver(
             CallLog.Calls.CONTENT_URI, null, null, null,
             CallLog.Calls.DEFAULT_SORT_ORDER
         )
-
         try {
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    val fromNumber = cursor.getString(cursor.getColumnIndex(CallLog.Calls.NUMBER))
-                    val name = cursor.getString(cursor.getColumnIndex(CallLog.Calls.CACHED_NAME))
-                    val toNumber =
-                        cursor.getString(cursor.getColumnIndex(CallLog.Calls.CACHED_FORMATTED_NUMBER))
-                    val type = cursor.getInt(cursor.getColumnIndex(CallLog.Calls.TYPE))
-                    val date = cursor.getLong(cursor.getColumnIndex(CallLog.Calls.DATE))
+                    val number = cursor.getString(cursor.getColumnIndex(CallLog.Calls.NUMBER))
+                    val name   = cursor.getString(cursor.getColumnIndex(CallLog.Calls.CACHED_NAME))
+                    val type   = cursor.getInt(cursor.getColumnIndex(CallLog.Calls.TYPE))
+                    val date   = cursor.getLong(cursor.getColumnIndex(CallLog.Calls.DATE))
                     if (type == MISSED_TYPE) {
-                        sendMessages("$toNumber: Missed call from `$fromNumber` ($name). ${Date(date)}")
+                        val rules = rulesRepository.getRules().filter { it.enabled }
+                        retryDispatch(
+                            "📞 Missed call from `${escapeMarkdown(number)}` ($name). ${Date(date)}",
+                            rules
+                        )
                         break
                     }
                 } while (cursor.moveToNext())
                 cursor.close()
             } else {
-                sendMessages("Missed call from unknown")
+                val rules = rulesRepository.getRules().filter { it.enabled }
+                retryDispatch("📞 Missed call from unknown", rules)
             }
-        } catch (e: Exception) {
-            // На нет и суда нет
-        }
+        } catch (_: Exception) {}
     }
 
-    private fun String.highlightVerificationCodeInSms(): String {
-        var rez = this
-        "\\d{4,}|[A-Z\\d]{4,}".toRegex().findAll(rez)
-            .forEach {
-                rez = rez.replace(it.value, "`${it.value}`")
-            }
-        return rez
-    }
+    // -------------------------------------------------------------------------
+    // Retry dispatch with exponential back-off
+    // -------------------------------------------------------------------------
 
-    private fun sendMessages(messageText: String) {
-        telegramChatIds.forEach { chatId ->
-            sendMessage(messageText, chatId)
-        }
-    }
-
-    private fun sendMessage(
-        messageText: String,
-        chatId: String,
-        repeatCount: Int = MAX_ATTEMPT_COUNT
+    private fun retryDispatch(
+        text: String,
+        rules: List<ForwardRule>,
+        attempt: Int = 0
     ) {
-        if (repeatCount == 0) return
-        scope.launch(CoroutineExceptionHandler { _, t ->
-            sendMessage(messageText, chatId, repeatCount - 1)
-        } + SupervisorJob()) {
-            delay(calculateDelayMs(repeatCount))
-            sentMessageToTelegram(messageText, chatId)
+        if (attempt >= MAX_ATTEMPT_COUNT) return
+        scope.launch(SupervisorJob() + CoroutineExceptionHandler { _, _ ->
+            retryDispatch(text, rules, attempt + 1)
+        }) {
+            delay(attempt * 1_000L)
+            dispatcher.dispatch(text, rules)
         }
     }
 
-    private fun calculateDelayMs(repeatCount: Int) = (MAX_ATTEMPT_COUNT - repeatCount) * 1000L
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
 
-    private fun sentMessageToTelegram(messageText: String, chatId: String) {
-        val body = RequestBody.create(
-            "application/json".toMediaTypeOrNull(),
-            "{\"text\":\"$messageText\",\"parse_mode\":\"Markdown\",\"disable_web_page_preview\":false,\"disable_notification\":false,\"reply_to_message_id\":null,\"chat_id\":\"$chatId\"}"
-        )
-        val request = Request.Builder()
-            .url("https://api.telegram.org/bot$telegramToken/sendMessage")
-            .post(body)
-            .addHeader("accept", "application/json")
-            .addHeader("content-type", "application/json")
-            .build()
+    private fun String.highlightCode(): String {
+        var result = this
+        "\\d{4,}|[A-Z\\d]{4,}".toRegex().findAll(result).forEach {
+            result = result.replace(it.value, "`${it.value}`")
+        }
+        return result
+    }
 
-        okhttpClient.newCall(request).execute()
+    private fun escapeMarkdown(input: String?): String {
+        if (input.isNullOrEmpty()) return ""
+        return input
+            .replace("_", "\\_")
+            .replace("*", "\\*")
+            .replace("`", "\\`")
+            .replace("[", "\\[")
     }
 }
-
