@@ -1,7 +1,10 @@
 package com.example.smsfrowarder
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +13,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,15 +34,25 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : BaseActivity() {
 
-    private lateinit var evaluator: RuleEvaluator
-    private lateinit var adapter:   RulesAdapter
+    private lateinit var evaluator:    RuleEvaluator
+    private lateinit var adapter:      RulesAdapter
+    private lateinit var btnStart:     Button
+    private lateinit var btnStop:      Button
 
-    // Repository lives in App — already initialised on IO thread
     private val repo get() = App.get(this).rulesRepository
 
     private val editRuleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { refreshList() }
+
+    // Listens for SmsService start/stop broadcasts to update button state
+    private val serviceStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == SmsService.ACTION_STATE_CHANGED) {
+                updateServiceButtons(intent.getBooleanExtra(SmsService.EXTRA_RUNNING, false))
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +61,8 @@ class MainActivity : BaseActivity() {
         setSupportActionBar(findViewById<MaterialToolbar>(R.id.toolbar))
 
         evaluator = RuleEvaluator(this)
+        btnStart  = findViewById(R.id.btnStartService)
+        btnStop   = findViewById(R.id.btnStopService)
 
         adapter = RulesAdapter(
             onEdit   = { rule -> RuleEditActivity.start(this, editRuleLauncher, rule.id) },
@@ -66,15 +82,49 @@ class MainActivity : BaseActivity() {
         findViewById<FloatingActionButton>(R.id.fabAdd).setOnClickListener {
             RuleEditActivity.start(this, editRuleLauncher, null)
         }
-        findViewById<View>(R.id.btnStartService).setOnClickListener {
+
+        btnStart.setOnClickListener {
             SmsService.start(this)
+            // Optimistic UI update — broadcast will confirm
+            updateServiceButtons(true)
         }
-        findViewById<View>(R.id.btnStopService).setOnClickListener {
+        btnStop.setOnClickListener {
             SmsService.stop(this)
+            updateServiceButtons(false)
         }
 
         requestPermissions()
     }
+
+    override fun onResume() {
+        super.onResume()
+        refreshList()
+        updateServiceButtons(SmsService.isRunning(this))
+        warnIfMultiSimUnavailable()
+
+        // Register for service state changes
+        val filter = IntentFilter(SmsService.ACTION_STATE_CHANGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(serviceStateReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(serviceStateReceiver, filter)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        runCatching { unregisterReceiver(serviceStateReceiver) }
+    }
+
+    private fun updateServiceButtons(running: Boolean) {
+        btnStart.isEnabled = !running
+        btnStop.isEnabled  = running
+        btnStart.alpha     = if (running) 0.4f else 1.0f
+        btnStop.alpha      = if (running) 1.0f else 0.4f
+    }
+
+    // -------------------------------------------------------------------------
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
@@ -89,16 +139,6 @@ class MainActivity : BaseActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onResume() {
-        super.onResume()
-        refreshList()
-        warnIfMultiSimUnavailable()
-    }
-
-    // -------------------------------------------------------------------------
-    // List refresh — always on IO then post to main
-    // -------------------------------------------------------------------------
-
     private fun refreshList() {
         lifecycleScope.launch(Dispatchers.IO) {
             val rules = repo.getRules()
@@ -107,8 +147,6 @@ class MainActivity : BaseActivity() {
             }
         }
     }
-
-    // -------------------------------------------------------------------------
 
     private fun confirmDelete(rule: ForwardRule) {
         AlertDialog.Builder(this)
@@ -147,6 +185,8 @@ class MainActivity : BaseActivity() {
         if (results.values.any { !it }) {
             Toast.makeText(this, getString(R.string.warn_permissions), Toast.LENGTH_LONG).show()
         }
+        // Re-check service state after permissions granted
+        updateServiceButtons(SmsService.isRunning(this))
     }
 
     private fun requestPermissions() {
@@ -167,7 +207,7 @@ class MainActivity : BaseActivity() {
     }
 
     // =========================================================================
-    // RecyclerView adapter (inner — has access to getString via outer Activity)
+    // RecyclerView adapter
     // =========================================================================
 
     private inner class RulesAdapter(

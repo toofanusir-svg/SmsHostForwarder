@@ -26,7 +26,8 @@ class RuleEditActivity : BaseActivity() {
         }
     }
 
-    private val repo get() = App.get(this).rulesRepository
+    // Captured once in onCreate — never touches a potentially-destroyed context
+    private lateinit var repo: RulesRepository
     private var existingRule: ForwardRule? = null
 
     private lateinit var etName:         EditText
@@ -41,11 +42,14 @@ class RuleEditActivity : BaseActivity() {
     private lateinit var layoutWebhook:  View
     private lateinit var etWebhookUrl:   EditText
     private lateinit var etAuthHeader:   EditText
-    private lateinit var btnSave:        View
+    private lateinit var btnSave:        Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_rule_edit)
+
+        // Capture repo reference once — safe to use in coroutines even after finish()
+        repo = App.get(this).rulesRepository
 
         bindViews()
         setupSimSpinner()
@@ -54,9 +58,8 @@ class RuleEditActivity : BaseActivity() {
         val ruleId = intent.getStringExtra(EXTRA_RULE_ID)
         if (ruleId != null) {
             title = getString(R.string.title_edit_rule)
-            // Load rule on IO, populate form on main
             lifecycleScope.launch(Dispatchers.IO) {
-                val rule = repo.getRules().find { it.id == ruleId }
+                val rule = try { repo.getRules().find { it.id == ruleId } } catch (e: Exception) { null }
                 withContext(Dispatchers.Main) {
                     existingRule = rule
                     rule?.let { populateForm(it) }
@@ -87,10 +90,14 @@ class RuleEditActivity : BaseActivity() {
     }
 
     private fun setupSimSpinner() {
-        val options = arrayOf(getString(R.string.sim_any), getString(R.string.sim_1), getString(R.string.sim_2))
-        spinnerSim.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options).also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
+        val options = arrayOf(
+            getString(R.string.sim_any),
+            getString(R.string.sim_1),
+            getString(R.string.sim_2)
+        )
+        spinnerSim.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, options
+        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
     }
 
     private fun setupDestinationToggle() {
@@ -107,7 +114,7 @@ class RuleEditActivity : BaseActivity() {
         etName.setText(rule.name)
         etSender.setText(rule.senderFilter)
         spinnerSim.setSelection(when (rule.simSlot) {
-            SimSlot.ANY   -> 0; SimSlot.SIM_1 -> 1; SimSlot.SIM_2 -> 2
+            SimSlot.ANY -> 0; SimSlot.SIM_1 -> 1; SimSlot.SIM_2 -> 2
         })
         when (val d = rule.destination) {
             is Destination.Telegram -> {
@@ -151,14 +158,29 @@ class RuleEditActivity : BaseActivity() {
             Destination.Webhook(url, etAuthHeader.text.toString().trim())
         }
 
-        val rule = existingRule?.copy(name = name, simSlot = sim, senderFilter = sender, destination = destination)
-            ?: ForwardRule(name = name, simSlot = sim, senderFilter = sender, destination = destination)
+        val rule = existingRule?.copy(
+            name = name, simSlot = sim, senderFilter = sender, destination = destination
+        ) ?: ForwardRule(
+            name = name, simSlot = sim, senderFilter = sender, destination = destination
+        )
 
-        // Disable button to prevent double-tap
         btnSave.isEnabled = false
 
+        // repo is a direct reference captured in onCreate — safe after finish()
         lifecycleScope.launch(Dispatchers.IO) {
-            if (existingRule != null) repo.updateRule(rule) else repo.addRule(rule)
+            try {
+                if (existingRule != null) repo.updateRule(rule) else repo.addRule(rule)
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    btnSave.isEnabled = true
+                    Toast.makeText(
+                        this@RuleEditActivity,
+                        "Save failed: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                return@launch
+            }
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@RuleEditActivity, getString(R.string.rule_saved), Toast.LENGTH_SHORT).show()
                 finish()
