@@ -4,10 +4,10 @@ on:
   push:
     branches: [ master, main ]
     tags:
-      - 'v*'          # v2.1.0 → triggers a GitHub Release
+      - 'v*'
   pull_request:
     branches: [ master, main ]
-  workflow_dispatch:  # manual trigger from the Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,11 +15,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Checkout ────────────────────────────────────────────────────────
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ── 2. Java ────────────────────────────────────────────────────────────
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -27,29 +25,20 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 3. Gradle permission ───────────────────────────────────────────────
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # ── 4. Decode keystore (release builds only) ───────────────────────────
-      #
-      #  Add these four secrets to your repo (Settings → Secrets → Actions):
-      #    KEYSTORE_BASE64      – base64 of your .jks file
-      #                           Generate: base64 -w 0 release.jks
-      #    KEY_STORE_PASSWORD   – keystore password
-      #    KEY_ALIAS            – key alias
-      #    KEY_PASSWORD         – key password
-      #
-      #  For debug/PR builds the step is skipped and the APK is debug-signed.
       - name: Decode keystore
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.jks
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
+            echo "Keystore decoded."
+          else
+            echo "No keystore secret — APK will be unsigned (debug-signed by Gradle)."
+          fi
 
-      # ── 5. Determine version ───────────────────────────────────────────────
-      #  On a tag like v2.1.3  → versionName=2.1.3
-      #  Otherwise             → versionName=0.0.<run_number> (snapshot)
       - name: Set version
         id: version
         run: |
@@ -58,28 +47,26 @@ jobs:
           else
             VERSION_NAME="0.0.${{ github.run_number }}"
           fi
-          echo "VERSION_NAME=$VERSION_NAME"   >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
           echo "VERSION_CODE=${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      # ── 6. Build ───────────────────────────────────────────────────────────
       - name: Build release APK
-        run: ./gradlew assembleRelease
-              -PversionCode=${{ steps.version.outputs.VERSION_CODE }}
-              -PversionName=${{ steps.version.outputs.VERSION_NAME }}
         env:
           KEYSTORE_BASE64:    ${{ secrets.KEYSTORE_BASE64 }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS:          ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:       ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -PversionCode=${{ steps.version.outputs.VERSION_CODE }} \
+            -PversionName=${{ steps.version.outputs.VERSION_NAME }}
 
-      # ── 7. Rename APK ──────────────────────────────────────────────────────
       - name: Rename APK
         run: |
           mkdir -p artifacts
           cp app/build/outputs/apk/release/*.apk \
-             artifacts/SmsForwarder-${{ steps.version.outputs.VERSION_NAME }}.apk
+             "artifacts/SmsForwarder-${{ steps.version.outputs.VERSION_NAME }}.apk"
 
-      # ── 8. Upload artifact (every build) ──────────────────────────────────
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -87,7 +74,6 @@ jobs:
           path: artifacts/*.apk
           retention-days: 30
 
-      # ── 9. GitHub Release (tag builds only) ───────────────────────────────
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
