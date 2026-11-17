@@ -84,13 +84,13 @@ class MainActivity : BaseActivity() {
 
         btnStart.setOnClickListener {
             SmsService.start(this)
-            // Optimistic UI update — broadcast will confirm
             updateServiceButtons(true)
         }
         btnStop.setOnClickListener {
             SmsService.stop(this)
             updateServiceButtons(false)
         }
+        findViewById<Button>(R.id.btnTest).setOnClickListener { runTest() }
 
         requestPermissions()
     }
@@ -176,6 +176,48 @@ class MainActivity : BaseActivity() {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@MainActivity, getString(R.string.warn_multisim), Toast.LENGTH_LONG).show()
                 }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Test — sends a test message through ALL enabled rules
+    // -------------------------------------------------------------------------
+
+    private fun runTest() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val rules = repo.getRules().filter { it.enabled }
+            if (rules.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, getString(R.string.test_no_rules), Toast.LENGTH_LONG).show()
+                }
+                return@launch
+            }
+
+            val testText = "🔧 *TEST* — SMS Forwarder test message\nThis verifies that your rules are working correctly."
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@MainActivity, getString(R.string.test_running), Toast.LENGTH_SHORT).show()
+            }
+
+            val dispatcher = ForwardDispatcher(App.get(this@MainActivity).logRepository)
+            dispatcher.dispatch(testText, "TEST_SENDER", rules)
+
+            // Wait briefly then read results
+            kotlinx.coroutines.delay(2000)
+            val entries = App.get(this@MainActivity).logRepository.getAll()
+                .filter { it.ruleId in rules.map { r -> r.id } && it.sender == "TEST_SENDER" }
+
+            val ok  = entries.count { it.status == com.example.smsfrowarder.model.LogStatus.SUCCESS }
+            val bad = entries.count { it.status == com.example.smsfrowarder.model.LogStatus.FAILED }
+
+            withContext(Dispatchers.Main) {
+                val msg = getString(R.string.test_result, ok, bad)
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(getString(R.string.test_title))
+                    .setMessage(msg)
+                    .setPositiveButton("OK", null)
+                    .show()
             }
         }
     }

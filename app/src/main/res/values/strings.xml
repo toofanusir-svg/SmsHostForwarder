@@ -5,6 +5,7 @@
     <string name="title_rules">Forwarding Rules</string>
     <string name="btn_start">Start</string>
     <string name="btn_stop">Stop</string>
+    <string name="btn_test">Test</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_log">Log</string>
     <string name="confirm_delete_title">Delete rule</string>
@@ -60,4 +61,10 @@
     <!-- Notification -->
     <string name="notif_title">SMS Forwarder active</string>
     <string name="notif_text">Forwarding rules are running</string>
+
+    <!-- Test -->
+    <string name="test_title">Test Results</string>
+    <string name="test_running">Sending test message…</string>
+    <string name="test_no_rules">No enabled rules to test.</string>
+    <string name="test_result">Success: %1$d\nFailed: %2$d\n\nCheck the Log for details.</string>
 </resources>

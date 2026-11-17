@@ -4,6 +4,7 @@
     <string name="title_rules">قوانین ارسال</string>
     <string name="btn_start">شروع</string>
     <string name="btn_stop">توقف</string>
+    <string name="btn_test">تست</string>
     <string name="menu_settings">تنظیمات</string>
     <string name="menu_log">لاگ</string>
     <string name="confirm_delete_title">حذف قانون</string>
@@ -54,4 +55,9 @@
 
     <string name="notif_title">ارسال‌کننده پیامک فعال است</string>
     <string name="notif_text">قوانین ارسال در حال اجرا هستند</string>
+
+    <string name="test_title">نتایج تست</string>
+    <string name="test_running">در حال ارسال پیام تست…</string>
+    <string name="test_no_rules">هیچ قانون فعالی برای تست وجود ندارد.</string>
+    <string name="test_result">موفق: %1$d\nناموفق: %2$d\n\nبرای جزئیات به لاگ مراجعه کنید.</string>
 </resources>

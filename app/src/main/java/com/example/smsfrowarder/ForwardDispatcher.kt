@@ -6,6 +6,11 @@ import com.example.smsfrowarder.model.LogStatus
 import com.example.smsfrowarder.model.TelegramDest
 import com.example.smsfrowarder.model.WebhookDest
 import com.google.gson.JsonObject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,10 +20,13 @@ import java.util.concurrent.TimeUnit
 class ForwardDispatcher(private val logRepo: LogRepository) {
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(10, TimeUnit.SECONDS)
         .build()
+
+    /** Scope for parallel dispatch — one coroutine per rule. */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         private val JSON_TYPE = "application/json".toMediaTypeOrNull()
@@ -26,54 +34,61 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
 
     /**
      * Dispatches [text] to every destination in every matched rule.
-     * Creates a [LogEntry] per (rule × destination) and updates status after each attempt.
-     * Returns all created log entries.
+     * Each rule runs in its OWN coroutine so a slow/failing rule never
+     * blocks the others. All rules are checked independently.
      */
-    fun dispatch(
+    suspend fun dispatch(
         text: String,
         sender: String,
         rules: List<ForwardRule>
     ): List<LogEntry> {
         val entries = mutableListOf<LogEntry>()
 
+        // Create all log entries up front
         rules.forEach { rule ->
             rule.telegram?.let { tg ->
                 val entry = createEntry(sender, text, rule, "Telegram (${tg.chatIds})")
                 logRepo.add(entry)
                 entries += entry
-                trySend(entry) { sendTelegram(text, tg) }
             }
             rule.webhook?.let { wh ->
                 val entry = createEntry(sender, text, rule, "Webhook (${wh.url.take(40)})")
                 logRepo.add(entry)
                 entries += entry
-                trySend(entry) { sendWebhook(text, wh) }
             }
         }
+
+        // Fire each entry in parallel — no rule blocks another
+        entries.map { entry ->
+            scope.async {
+                val rule = rules.find { it.id == entry.ruleId } ?: return@async
+                trySend(entry, text, rule)
+            }
+        }.awaitAll()
+
         return entries
     }
 
     /**
-     * Retries a single log entry. Used by the log screen's retry button.
+     * Synchronous variant for single-entry retries from the log screen.
      */
     fun retry(entry: LogEntry, rules: List<ForwardRule>) {
         val rule = rules.find { it.id == entry.ruleId } ?: run {
             logRepo.updateStatus(entry.id, LogStatus.FAILED, "Rule no longer exists")
             return
         }
-        // Re-attempt the right destination based on the label stored in the entry
-        if (entry.destination.startsWith("Telegram")) {
-            rule.telegram?.let { trySend(entry) { sendTelegram(entry.fullMessage, it) } }
-        } else {
-            rule.webhook?.let { trySend(entry) { sendWebhook(entry.fullMessage, it) } }
-        }
+        trySend(entry, entry.fullMessage, rule)
     }
 
     // -------------------------------------------------------------------------
 
-    private fun trySend(entry: LogEntry, block: () -> Unit) {
+    private fun trySend(entry: LogEntry, text: String, rule: ForwardRule) {
         try {
-            block()
+            if (entry.destination.startsWith("Telegram")) {
+                rule.telegram?.let { sendTelegram(text, it) }
+            } else {
+                rule.webhook?.let { sendWebhook(text, it) }
+            }
             logRepo.updateStatus(entry.id, LogStatus.SUCCESS)
         } catch (e: Exception) {
             logRepo.updateStatus(entry.id, LogStatus.FAILED, e.message ?: "Unknown error")
@@ -86,12 +101,12 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
         rule: ForwardRule,
         destination: String
     ) = LogEntry(
-        sender        = sender,
+        sender         = sender,
         messagePreview = fullMessage.take(80),
-        ruleName      = rule.name,
-        destination   = destination,
-        fullMessage   = fullMessage,
-        ruleId        = rule.id
+        ruleName       = rule.name,
+        destination    = destination,
+        fullMessage    = fullMessage,
+        ruleId         = rule.id
     )
 
     // -------------------------------------------------------------------------
@@ -112,9 +127,10 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
                 .addHeader("content-type", "application/json")
                 .build()
             val resp = client.newCall(req).execute()
-            val body = resp.body?.string() ?: ""
+            val body  = resp.body?.string() ?: ""
+            val code  = resp.code
             resp.close()
-            if (!resp.isSuccessful) throw Exception("HTTP ${resp.code}: $body")
+            if (!resp.isSuccessful) throw Exception("HTTP $code: $body")
         }
     }
 
@@ -126,8 +142,9 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
             .addHeader("content-type", "application/json")
         if (dest.authHeader.isNotBlank()) builder.addHeader("Authorization", dest.authHeader)
         val resp = client.newCall(builder.build()).execute()
-        val body = resp.body?.string() ?: ""
+        val body  = resp.body?.string() ?: ""
+        val code  = resp.code
         resp.close()
-        if (!resp.isSuccessful) throw Exception("HTTP ${resp.code}: $body")
+        if (!resp.isSuccessful) throw Exception("HTTP $code: $body")
     }
 }
