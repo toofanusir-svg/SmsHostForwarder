@@ -14,6 +14,5 @@ data class LogEntry(
     var status: LogStatus = LogStatus.PENDING,
     var errorMessage: String = "",
     val fullMessage: String,
-    val smsData: SmsData? = null,
     val ruleId: String
 )

@@ -72,7 +72,7 @@ class SmsService : Service() {
     private fun startReceiver() {
         smsReceiver?.let { runCatching { unregisterReceiver(it) }; it.release() }
         val app = App.get(this)
-        smsReceiver = SMSReceiver(app.rulesRepository, RuleEvaluator(this))
+        smsReceiver = SMSReceiver(app.rulesRepository, RuleEvaluator(this), ForwardDispatcher(app.logRepository))
         val filter = IntentFilter().apply {
             addAction(SMS_RECEIVED_ACTION)
             addAction(ACTION_PHONE_STATE_CHANGED)

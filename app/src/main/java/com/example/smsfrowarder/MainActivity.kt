@@ -194,19 +194,14 @@ class MainActivity : BaseActivity() {
                 return@launch
             }
 
-            val testData = com.example.smsfrowarder.model.SmsData(
-                sender = "TEST_SENDER",
-                body = "Test message from SMS Forwarder. Your rules are working.",
-                simSlot = com.example.smsfrowarder.model.SimSlot.ANY,
-                receiveTime = System.currentTimeMillis()
-            )
+            val testText = "🔧 *TEST* — SMS Forwarder test message. Your rules are working."
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@MainActivity, getString(R.string.test_running), Toast.LENGTH_SHORT).show()
             }
 
             val dispatcher = ForwardDispatcher(App.get(this@MainActivity).logRepository)
-            dispatcher.dispatch(testData, rules)
+            dispatcher.dispatch(testText, "TEST_SENDER", rules)
 
             kotlinx.coroutines.delay(2000)
             val entries = App.get(this@MainActivity).logRepository.getAll()
@@ -216,10 +211,9 @@ class MainActivity : BaseActivity() {
             val bad = entries.count { it.status == com.example.smsfrowarder.model.LogStatus.FAILED }
 
             withContext(Dispatchers.Main) {
-                val msg = getString(R.string.test_result, ok, bad)
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle(getString(R.string.test_title))
-                    .setMessage(msg)
+                    .setMessage(getString(R.string.test_result, ok, bad))
                     .setPositiveButton("OK", null)
                     .show()
             }
