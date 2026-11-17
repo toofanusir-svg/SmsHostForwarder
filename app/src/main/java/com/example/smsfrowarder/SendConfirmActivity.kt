@@ -44,7 +44,7 @@ class SendConfirmActivity : AppCompatActivity() {
         // Show preview of the pending message
         val pending = readPending()
         tvPreview.text = pending?.let {
-            "From: ${it.sender}\n${it.body.take(60)}"
+            "From: ${it.smsData.sender}\n${it.smsData.body.take(60)}"
         } ?: "No pending message"
 
         timer = object : CountDownTimer(10000, 1000) {
