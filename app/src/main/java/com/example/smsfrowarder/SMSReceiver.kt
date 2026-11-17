@@ -36,7 +36,7 @@ class SMSReceiver(
             Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
                 val subId = intent.getIntExtra(EXTRA_SUBSCRIPTION_ID, -1)
                 val slot  = evaluator.resolveSlot(subId)
-                processSMS(Telephony.Sms.Intents.getMessagesFromIntent(intent), slot)
+                processSMS(context, Telephony.Sms.Intents.getMessagesFromIntent(intent), slot)
             }
             TelephonyManager.ACTION_PHONE_STATE_CHANGED -> registerCallStateListener(context)
             ACTION_BATTERY_LOW -> {
@@ -57,16 +57,26 @@ class SMSReceiver(
         scope.cancel()
     }
 
-    private fun processSMS(messages: Array<SmsMessage>, slot: SimSlot?) {
+    private fun processSMS(context: Context, messages: Array<SmsMessage>, slot: SimSlot?) {
         messages.firstOrNull()?.let { first ->
             val sender  = first.displayOriginatingAddress.orEmpty()
             val body    = messages.joinToString("") { it.displayMessageBody }.highlightCode()
             val date    = Date(first.timestampMillis)
             val simTag  = when (slot) { SimSlot.SIM_1 -> "SIM 1"; SimSlot.SIM_2 -> "SIM 2"; else -> "SIM ?" }
             val text    = "📱 *$simTag* — From *${escapeMarkdown(sender)}* at $date\n\n$body"
+            val preview = "From: $sender\n${body.take(80)}"
             val matched = evaluator.matching(rulesRepository.getRules(), sender, slot)
             if (matched.isNotEmpty()) {
-                scope.launch { dispatcher.dispatch(text, sender, matched) }
+                val ruleIds = matched.map { it.id }.joinToString(",")
+                // Show 10-second confirmation dialog before sending
+                val confirmIntent = Intent(context, SendConfirmActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    putExtra(SendConfirmActivity.EXTRA_TEXT,     text)
+                    putExtra(SendConfirmActivity.EXTRA_SENDER,   sender)
+                    putExtra(SendConfirmActivity.EXTRA_RULE_IDS, ruleIds)
+                    putExtra(SendConfirmActivity.EXTRA_PREVIEW,  preview)
+                }
+                context.startActivity(confirmIntent)
             }
         }
     }

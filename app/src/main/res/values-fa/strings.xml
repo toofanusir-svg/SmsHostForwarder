@@ -70,7 +70,8 @@
     <string name="log_clear_msg">تاریخچه ارسال حذف می‌شود.</string>
     <!-- Send confirm -->
     <string name="send_confirm_title">در حال ارسال پیامک</string>
-    <string name="send_confirm_msg">این پیام در چند ثانیه ارسال می‌شود. برای توقف سرویس دکمه انصراف را بزنید.</string>
+    <string name="send_confirm_msg">این پیام ارسال می‌شود. برای توقف سرویس انصراف بزنید.</string>
+    <string name="send_confirm_from">از: %s</string>
     <string name="send_confirm_in">ارسال در</string>
     <string name="send_confirm_seconds">ثانیه</string>
     <string name="send_confirm_cancel">انصراف و توقف سرویس</string>

@@ -70,7 +70,8 @@
     <string name="log_clear_msg">This will delete all forwarding history.</string>
     <!-- Send confirm -->
     <string name="send_confirm_title">Forwarding SMS</string>
-    <string name="send_confirm_msg">This message will be forwarded in a few seconds. Tap Cancel to stop the service.</string>
+    <string name="send_confirm_msg">This message will be forwarded. Tap cancel to stop the service.</string>
+    <string name="send_confirm_from">From: %s</string>
     <string name="send_confirm_in">Sending in</string>
     <string name="send_confirm_seconds">seconds</string>
     <string name="send_confirm_cancel">Cancel &amp; Stop Service</string>

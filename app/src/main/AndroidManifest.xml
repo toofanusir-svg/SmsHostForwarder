@@ -73,6 +73,14 @@
             android:excludeFromRecents="true"
             android:theme="@style/Theme.SmsFrowarder" />
 
+        <activity
+            android:name=".SendConfirmActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.SmsFrowarder" />
+
     </application>
 
 </manifest>
