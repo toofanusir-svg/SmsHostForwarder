@@ -101,8 +101,7 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
             addProperty("Body", otpMessage)
             addProperty("MethodName", "Web")
         }
-        val payload = "[$obj]"
-        // Encrypt if user has set an encryption key
+        val payload = obj.toString()   // object, not array
         val finalPayload = if (dest.encryptionKey.isNotBlank())
             Crypto.encrypt(payload, dest.encryptionKey) else payload
         sendWebhookRaw(finalPayload, dest)
@@ -126,7 +125,7 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
             addProperty("Body", text)
             addProperty("MethodName", "Web")
         }
-        sendWebhookRaw("[$obj]", dest)
+        sendWebhookRaw(obj.toString(), dest)   // object, not array
         true
     } catch (_: Exception) { false }
 
@@ -177,7 +176,7 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
             addProperty("Body", data.body)
             addProperty("MethodName", methodName)
         }
-        return "[$obj]"
+        return obj.toString()   // object, not array — servers typically expect a JSON object
     }
 
     private fun sendTelegram(text: String, dest: TelegramDest) {
