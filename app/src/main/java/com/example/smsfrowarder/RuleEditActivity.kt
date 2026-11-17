@@ -6,12 +6,15 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.example.smsfrowarder.model.ForwardRule
+import com.example.smsfrowarder.model.LogStatus
 import com.example.smsfrowarder.model.SimSlot
 import com.example.smsfrowarder.model.TelegramDest
 import com.example.smsfrowarder.model.WebhookDest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -47,6 +50,7 @@ class RuleEditActivity : BaseActivity() {
     private lateinit var etAuthHeader:   EditText
 
     private lateinit var btnSave:        Button
+    private lateinit var btnTestRule:    Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +72,7 @@ class RuleEditActivity : BaseActivity() {
         }
 
         btnSave.setOnClickListener { save() }
+        btnTestRule.setOnClickListener { testRule() }
         findViewById<View>(R.id.btnCancel).setOnClickListener { finish() }
     }
 
@@ -84,6 +89,7 @@ class RuleEditActivity : BaseActivity() {
         etWebhookUrl   = findViewById(R.id.etWebhookUrl)
         etAuthHeader   = findViewById(R.id.etAuthHeader)
         btnSave        = findViewById(R.id.btnSave)
+        btnTestRule    = findViewById(R.id.btnTestRule)
     }
 
     private fun setupSimSpinner() {
@@ -130,6 +136,92 @@ class RuleEditActivity : BaseActivity() {
         } ?: run {
             cbWebhook.isChecked      = false
             layoutWebhook.visibility = View.GONE
+        }
+    }
+
+    /**
+     * Tests the current form values without saving.
+     * Sends a test message to each checked destination and shows the result.
+     */
+    private fun testRule() {
+        val ruleName = etName.text?.toString()?.trim() ?: ""
+
+        // Build temporary destinations from current form values
+        val telegram: TelegramDest? = if (cbTelegram.isChecked) {
+            val token   = etBotToken.text?.toString()?.trim() ?: ""
+            val chatIds = etChatIds.text?.toString()?.trim()  ?: ""
+            if (token.isEmpty() || chatIds.isEmpty()) {
+                Toast.makeText(this, getString(R.string.error_token_chatid_required), Toast.LENGTH_SHORT).show()
+                return
+            }
+            TelegramDest(token, chatIds)
+        } else null
+
+        val webhook: WebhookDest? = if (cbWebhook.isChecked) {
+            val url = etWebhookUrl.text?.toString()?.trim() ?: ""
+            if (url.isEmpty() || (!url.startsWith("https://") && !url.startsWith("http://"))) {
+                Toast.makeText(this, getString(R.string.error_url_required), Toast.LENGTH_SHORT).show()
+                return
+            }
+            WebhookDest(url, etAuthHeader.text?.toString()?.trim() ?: "")
+        } else null
+
+        if (telegram == null && webhook == null) {
+            Toast.makeText(this, getString(R.string.error_no_destination), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Build a temporary rule for the test
+        val tempRule = ForwardRule(
+            name = ruleName.ifEmpty { "Test" },
+            telegram = telegram,
+            webhook  = webhook
+        )
+
+        btnTestRule.isEnabled = false
+        Toast.makeText(this, getString(R.string.test_running), Toast.LENGTH_SHORT).show()
+
+        val logRepo = App.get(this).logRepository
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val dispatcher = ForwardDispatcher(logRepo)
+            val testText = "🔧 *TEST* — Rule \"$ruleName\" test message\nThis verifies your destination is configured correctly."
+            val entries = dispatcher.dispatch(testText, "TEST", listOf(tempRule))
+
+            // Wait for network calls to complete
+            delay(3000)
+
+            // Read back the log entries we just created
+            val results = logRepo.getAll()
+                .filter { it.ruleId == tempRule.id }
+                .sortedByDescending { it.timestamp }
+
+            withContext(Dispatchers.Main) {
+                btnTestRule.isEnabled = true
+
+                val report = buildString {
+                    results.forEach { entry ->
+                        val icon = when (entry.status) {
+                            LogStatus.SUCCESS -> "✅"
+                            LogStatus.FAILED  -> "❌"
+                            LogStatus.PENDING -> "⏳"
+                        }
+                        appendLine("$icon ${entry.destination}")
+                        if (entry.errorMessage.isNotEmpty()) {
+                            appendLine("   ${entry.errorMessage.take(100)}")
+                        }
+                    }
+                    if (results.isEmpty()) {
+                        appendLine(getString(R.string.test_no_response))
+                    }
+                }
+
+                AlertDialog.Builder(this@RuleEditActivity)
+                    .setTitle(getString(R.string.test_title))
+                    .setMessage(report)
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
         }
     }
 

@@ -33,6 +33,7 @@
     <string name="hint_webhook_url">آدرس وب‌هوک (https://…)</string>
     <string name="hint_auth_header">هدر Authorization (اختیاری)</string>
     <string name="btn_save">ذخیره</string>
+    <string name="btn_test_rule">تست</string>
     <string name="error_token_chatid_required">توکن ربات و شناسه چت الزامی است</string>
     <string name="error_url_required">یک آدرس معتبر وارد کنید</string>
     <string name="error_no_destination">حداقل یک مقصد (تلگرام یا وب‌هوک) انتخاب کنید</string>
@@ -60,4 +61,5 @@
     <string name="test_running">در حال ارسال پیام تست…</string>
     <string name="test_no_rules">هیچ قانون فعالی برای تست وجود ندارد.</string>
     <string name="test_result">موفق: %1$d\nناموفق: %2$d\n\nبرای جزئیات به لاگ مراجعه کنید.</string>
+    <string name="test_no_response">پاسخی دریافت نشد. توکن و شبکه را بررسی کنید.</string>
 </resources>
