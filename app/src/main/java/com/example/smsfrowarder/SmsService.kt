@@ -21,18 +21,16 @@ class SmsService : Service() {
         private const val CHANNEL_ID      = "sms_forwarder_channel"
         private const val NOTIFICATION_ID = 1001
 
-        // Broadcast action so MainActivity can update the button state
         const val ACTION_STATE_CHANGED = "com.example.smsfrowarder.SERVICE_STATE"
         const val EXTRA_RUNNING        = "running"
 
         fun start(context: Context) {
             val intent = Intent(context, SmsService::class.java)
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     context.startForegroundService(intent)
-                } else {
+                else
                     context.startService(intent)
-                }
             } catch (e: Exception) {
                 Log.e(TAG, "startService failed: ${e.message}", e)
             }
@@ -43,12 +41,9 @@ class SmsService : Service() {
         }
 
         fun isRunning(context: Context): Boolean {
-            val am = context.getSystemService(Context.ACTIVITY_SERVICE)
-                    as android.app.ActivityManager
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             @Suppress("DEPRECATION")
-            return am.getRunningServices(50).any {
-                it.service.className == SmsService::class.java.name
-            }
+            return am.getRunningServices(50).any { it.service.className == SmsService::class.java.name }
         }
     }
 
@@ -70,21 +65,14 @@ class SmsService : Service() {
 
     private fun startForegroundWithNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID, "SMS Forwarder", NotificationManager.IMPORTANCE_LOW
-            )
+            val channel = NotificationChannel(CHANNEL_ID, "SMS Forwarder", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-
         val pendingFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        else
-            PendingIntent.FLAG_UPDATE_CURRENT
+        else PendingIntent.FLAG_UPDATE_CURRENT
 
-        val openIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java), pendingFlags
-        )
-
+        val openIntent = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), pendingFlags)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(getString(R.string.notif_title))
@@ -92,34 +80,23 @@ class SmsService : Service() {
             .setContentIntent(openIntent)
             .setOngoing(true)
             .build()
-
         startForeground(NOTIFICATION_ID, notification)
     }
 
     private fun startReceiver() {
-        smsReceiver?.let {
-            runCatching { unregisterReceiver(it) }
-            it.release()
-        }
-
-        val rulesRepo  = App.get(this).rulesRepository
-        val evaluator  = RuleEvaluator(this)
-        val dispatcher = ForwardDispatcher()
-
-        smsReceiver = SMSReceiver(rulesRepo, evaluator, dispatcher)
-
+        smsReceiver?.let { runCatching { unregisterReceiver(it) }; it.release() }
+        val app = App.get(this)
+        smsReceiver = SMSReceiver(app.rulesRepository, RuleEvaluator(this), ForwardDispatcher(app.logRepository))
         val filter = IntentFilter().apply {
             addAction(SMS_RECEIVED_ACTION)
             addAction(ACTION_PHONE_STATE_CHANGED)
             addAction(ACTION_BATTERY_LOW)
         }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             registerReceiver(smsReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
+        else
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(smsReceiver, filter)
-        }
     }
 
     private fun broadcastState(running: Boolean) {
@@ -131,10 +108,7 @@ class SmsService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        smsReceiver?.let {
-            runCatching { unregisterReceiver(it) }
-            it.release()
-        }
+        smsReceiver?.let { runCatching { unregisterReceiver(it) }; it.release() }
         smsReceiver = null
         @Suppress("DEPRECATION")
         stopForeground(true)

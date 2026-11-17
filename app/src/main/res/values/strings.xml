@@ -6,6 +6,7 @@
     <string name="btn_start">Start</string>
     <string name="btn_stop">Stop</string>
     <string name="menu_settings">Settings</string>
+    <string name="menu_log">Log</string>
     <string name="confirm_delete_title">Delete rule</string>
     <string name="confirm_delete_msg">Delete \"%s\"?</string>
     <string name="btn_delete">Delete</string>
@@ -36,6 +37,7 @@
     <string name="btn_save">Save</string>
     <string name="error_token_chatid_required">Bot token and Chat ID are required</string>
     <string name="error_url_required">A valid URL is required</string>
+    <string name="error_no_destination">Select at least one destination (Telegram or Webhook)</string>
     <string name="rule_saved">Rule saved</string>
 
     <!-- SettingsActivity -->
@@ -47,6 +49,13 @@
     <string name="rb_theme_light">Light</string>
     <string name="rb_theme_dark">Dark</string>
     <string name="btn_apply">Apply</string>
+
+    <!-- Log -->
+    <string name="title_log">Forward Log</string>
+    <string name="log_retry">Retry</string>
+    <string name="log_clear_btn">Clear Log</string>
+    <string name="log_clear_title">Clear all logs?</string>
+    <string name="log_clear_msg">This will delete all forwarding history.</string>
 
     <!-- Notification -->
     <string name="notif_title">SMS Forwarder active</string>

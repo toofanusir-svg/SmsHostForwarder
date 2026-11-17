@@ -7,14 +7,14 @@ class App : Application() {
 
     lateinit var rulesRepository: RulesRepository
         private set
+    lateinit var logRepository: LogRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
-
-        // Install crash handler before anything else — shows stack trace on screen
         Thread.setDefaultUncaughtExceptionHandler(CrashHandler(applicationContext))
-
         rulesRepository = RulesRepository.create(this)
+        logRepository   = LogRepository.create(this)
         applyTheme(AppSettings(this).theme)
     }
 

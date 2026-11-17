@@ -3,9 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_log"
+        android:title="@string/menu_log"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_settings"
-        android:icon="@android:drawable/ic_menu_preferences"
         android:title="@string/menu_settings"
+        android:icon="@android:drawable/ic_menu_preferences"
         app:showAsAction="ifRoom" />
 
 </menu>

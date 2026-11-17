@@ -22,7 +22,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.smsfrowarder.model.Destination
 import com.example.smsfrowarder.model.ForwardRule
 import com.example.smsfrowarder.model.SimSlot
 import com.google.android.material.appbar.MaterialToolbar
@@ -132,11 +131,17 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_settings) {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            return true
+        return when (item.itemId) {
+            R.id.action_log -> {
+                startActivity(Intent(this, LogActivity::class.java))
+                true
+            }
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
-        return super.onOptionsItemSelected(item)
     }
 
     private fun refreshList() {
@@ -254,11 +259,11 @@ class MainActivity : BaseActivity() {
                 }
                 val sender = if (rule.senderFilter.isBlank() || rule.senderFilter == "*")
                     getString(R.string.label_any_sender) else rule.senderFilter
-                val dest = when (val d = rule.destination) {
-                    is Destination.Telegram -> "Telegram (${d.chatIds})"
-                    is Destination.Webhook  -> "Webhook (${d.url.take(30)}…)"
-                }
-                return "$sim · $sender → $dest"
+                val dests = buildList {
+                    rule.telegram?.let { add("Telegram (${it.chatIds})") }
+                    rule.webhook?.let  { add("Webhook (${it.url.take(25)}…)") }
+                }.joinToString(" + ")
+                return "$sim · $sender → $dests"
             }
         }
     }
