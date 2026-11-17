@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SMS Forwarder icon: envelope with a forward arrow
+  Simple, works at all sizes, renders well on notification bar
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background circle -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0" />
+
+    <!-- Envelope body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,36 L88,36 L88,72 L20,72 Z" />
+
+    <!-- Envelope flap (V shape) -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M20,36 L54,58 L88,36 Z" />
+
+    <!-- Forward arrow -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M60,62 L76,54 L60,46 L60,51 L44,51 L44,57 L60,57 Z" />
+
+</vector>

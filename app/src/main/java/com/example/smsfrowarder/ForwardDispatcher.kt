@@ -82,13 +82,11 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
 
     /** Returns null on success, error message string on failure. */
     fun sendOtpWebhook(otpMessage: String, dest: WebhookDest): String? = try {
-        // Send as plain JSON {"message":"..."} so any server can receive it
-        val payload = JsonObject().apply {
-            addProperty("message", otpMessage)
-        }.toString()
-        val finalPayload = if (dest.encryptionKey.isNotBlank())
-            Crypto.encrypt(payload, dest.encryptionKey) else payload
-        sendWebhookRaw(finalPayload, dest)
+        val body = if (dest.encryptionKey.isNotBlank())
+            JsonObject().apply { addProperty("message", Crypto.encrypt(otpMessage, dest.encryptionKey)) }.toString()
+        else
+            JsonObject().apply { addProperty("message", otpMessage) }.toString()
+        sendWebhookRaw(body, dest)
         null
     } catch (e: Exception) { e.message ?: "Unknown error" }
 
@@ -100,9 +98,10 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
                 rule.telegram?.let { sendTelegram(text, it) }
             } else {
                 rule.webhook?.let { wh ->
-                    val finalText = if (wh.encryptionKey.isNotBlank())
-                        Crypto.encrypt(text, wh.encryptionKey) else text
-                    sendWebhookText(finalText, wh)
+                    // Always wrap in {"message":"..."} — server expects a JSON object
+                    val value = if (wh.encryptionKey.isNotBlank()) Crypto.encrypt(text, wh.encryptionKey) else text
+                    val body  = JsonObject().apply { addProperty("message", value) }.toString()
+                    sendWebhookRaw(body, wh)
                 }
             }
             logRepo.updateStatus(entry.id, LogStatus.SUCCESS)
@@ -149,20 +148,6 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
             resp.close()
             if (!ok) throw Exception("HTTP $code: $body")
         }
-    }
-
-    /** Sends the message text as plain text body — no JSON wrapping. */
-    private fun sendWebhookText(text: String, dest: WebhookDest) {
-        val builder = Request.Builder()
-            .url(dest.url)
-            .post(text.toRequestBody("text/plain; charset=utf-8".toMediaTypeOrNull()))
-        if (dest.authHeader.isNotBlank()) builder.addHeader("Authorization", dest.authHeader)
-        val resp = client.newCall(builder.build()).execute()
-        val body = resp.body?.string() ?: ""
-        val code = resp.code
-        val ok = resp.isSuccessful
-        resp.close()
-        if (!ok) throw Exception("HTTP $code: $body")
     }
 
     private fun sendWebhookRaw(payload: String, dest: WebhookDest) {
