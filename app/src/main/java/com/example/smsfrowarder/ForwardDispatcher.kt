@@ -84,16 +84,30 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
 
     // ── OTP verification ─────────────────────────────────────────────────────
 
-    fun sendOtpTelegram(otpMessage: String, dest: TelegramDest): Boolean = try {
+    /** Returns null on success, error message on failure. */
+    fun sendOtpTelegram(otpMessage: String, dest: TelegramDest): String? = try {
         sendTelegram(otpMessage, dest)
-        true
-    } catch (_: Exception) { false }
+        null
+    } catch (e: Exception) { e.message ?: "Unknown error" }
 
-    fun sendOtpWebhook(otpMessage: String, dest: WebhookDest): Boolean = try {
-        val payload = """[{"SendNumber":"VERIFY","SendName":"","LineNumber":"any","ReceiveTime":"","SendTime":"","Body":"$otpMessage","MethodName":"Web"}]"""
-        sendWebhookRaw(payload, dest)
-        true
-    } catch (_: Exception) { false }
+    /** Returns null on success, error message on failure. */
+    fun sendOtpWebhook(otpMessage: String, dest: WebhookDest): String? = try {
+        val obj = JsonObject().apply {
+            addProperty("SendNumber", "VERIFY")
+            addProperty("SendName", "")
+            addProperty("LineNumber", "any")
+            addProperty("ReceiveTime", "")
+            addProperty("SendTime", "")
+            addProperty("Body", otpMessage)
+            addProperty("MethodName", "Web")
+        }
+        val payload = "[$obj]"
+        // Encrypt if user has set an encryption key
+        val finalPayload = if (dest.encryptionKey.isNotBlank())
+            Crypto.encrypt(payload, dest.encryptionKey) else payload
+        sendWebhookRaw(finalPayload, dest)
+        null
+    } catch (e: Exception) { e.message ?: "Unknown error" }
 
     // ── Quick test (no OTP) ──────────────────────────────────────────────────
 
@@ -103,8 +117,16 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
     } catch (e: Exception) { false }
 
     fun quickTestWebhook(text: String, dest: WebhookDest): Boolean = try {
-        val payload = """[{"SendNumber":"TEST","SendName":"","LineNumber":"any","ReceiveTime":"","SendTime":"","Body":"$text","MethodName":"Web"}]"""
-        sendWebhookRaw(payload, dest)
+        val obj = JsonObject().apply {
+            addProperty("SendNumber", "TEST")
+            addProperty("SendName", "")
+            addProperty("LineNumber", "any")
+            addProperty("ReceiveTime", "")
+            addProperty("SendTime", "")
+            addProperty("Body", text)
+            addProperty("MethodName", "Web")
+        }
+        sendWebhookRaw("[$obj]", dest)
         true
     } catch (_: Exception) { false }
 
@@ -190,8 +212,9 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
         val resp = client.newCall(builder.build()).execute()
         val body = resp.body?.string() ?: ""
         val code = resp.code
+        val success = resp.isSuccessful
         resp.close()
-        if (!resp.isSuccessful) throw Exception("HTTP $code: $body")
+        if (!success) throw Exception("HTTP $code: $body")
     }
 
     private fun createEntry(

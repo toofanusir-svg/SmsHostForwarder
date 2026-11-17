@@ -178,12 +178,12 @@ class RuleEditActivity : BaseActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             val dispatcher = ForwardDispatcher(App.get(this@RuleEditActivity).logRepository)
-            val ok = dispatcher.sendOtpTelegram(msg, dest)
+            val error = dispatcher.sendOtpTelegram(msg, dest)
 
             withContext(Dispatchers.Main) {
                 btnVerifyTelegram.isEnabled = true
-                if (ok) showOtpDialog(otp, isTelegram = true)
-                else Toast.makeText(this@RuleEditActivity, getString(R.string.otp_send_failed), Toast.LENGTH_LONG).show()
+                if (error == null) showOtpDialog(otp, isTelegram = true)
+                else Toast.makeText(this@RuleEditActivity, "${getString(R.string.otp_send_failed)}\n$error", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -205,12 +205,12 @@ class RuleEditActivity : BaseActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             val dispatcher = ForwardDispatcher(App.get(this@RuleEditActivity).logRepository)
-            val ok = dispatcher.sendOtpWebhook(msg, dest)
+            val error = dispatcher.sendOtpWebhook(msg, dest)
 
             withContext(Dispatchers.Main) {
                 btnVerifyWebhook.isEnabled = true
-                if (ok) showOtpDialog(otp, isTelegram = false)
-                else Toast.makeText(this@RuleEditActivity, getString(R.string.otp_send_failed), Toast.LENGTH_LONG).show()
+                if (error == null) showOtpDialog(otp, isTelegram = false)
+                else Toast.makeText(this@RuleEditActivity, "${getString(R.string.otp_send_failed)}\n$error", Toast.LENGTH_LONG).show()
             }
         }
     }
