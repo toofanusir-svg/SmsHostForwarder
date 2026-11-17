@@ -2,6 +2,8 @@
 
 An Android app that forwards incoming SMS and call information to your Telegram Bot and/or custom Webhook — with rule-based filtering by SIM card and sender number.
 
+📖 **[فارسی — مستندات فارسی](README-FA.md)**
+
 [![GitHub release](https://img.shields.io/github/v/release/toofanusir-svg/SmsHostForwarder)](https://github.com/toofanusir-svg/SmsHostForwarder/releases)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9-orange)]()
