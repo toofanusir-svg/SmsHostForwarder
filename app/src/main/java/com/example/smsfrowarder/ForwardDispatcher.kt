@@ -3,6 +3,8 @@ package com.example.smsfrowarder
 import com.example.smsfrowarder.model.ForwardRule
 import com.example.smsfrowarder.model.LogEntry
 import com.example.smsfrowarder.model.LogStatus
+import com.example.smsfrowarder.model.SimSlot
+import com.example.smsfrowarder.model.SmsData
 import com.example.smsfrowarder.model.TelegramDest
 import com.example.smsfrowarder.model.WebhookDest
 import com.google.gson.JsonObject
@@ -15,6 +17,9 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class ForwardDispatcher(private val logRepo: LogRepository) {
@@ -25,69 +30,99 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
         .writeTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    /** Scope for parallel dispatch — one coroutine per rule. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         private val JSON_TYPE = "application/json".toMediaTypeOrNull()
     }
 
-    /**
-     * Dispatches [text] to every destination in every matched rule.
-     * Each rule runs in its OWN coroutine so a slow/failing rule never
-     * blocks the others. All rules are checked independently.
-     */
-    suspend fun dispatch(
-        text: String,
-        sender: String,
-        rules: List<ForwardRule>
-    ): List<LogEntry> {
+    // ── Main dispatch (from SMS) ──────────────────────────────────────────────
+
+    suspend fun dispatch(data: SmsData, rules: List<ForwardRule>): List<LogEntry> {
         val entries = mutableListOf<LogEntry>()
 
-        // Create all log entries up front
         rules.forEach { rule ->
+            val methods = mutableListOf<String>()
+            if (rule.telegram != null) methods.add("Telegram")
+            if (rule.webhook != null) methods.add("Web")
+            val methodName = methods.joinToString(", ")
+
             rule.telegram?.let { tg ->
-                val entry = createEntry(sender, text, rule, "Telegram (${tg.chatIds})")
+                val text = formatTelegram(data)
+                val entry = createEntry(data.sender, text.take(80), rule, "Telegram (${tg.chatIds})", text, data)
                 logRepo.add(entry)
                 entries += entry
             }
             rule.webhook?.let { wh ->
-                val entry = createEntry(sender, text, rule, "Webhook (${wh.url.take(40)})")
+                val payload = buildWebhookPayload(data, methodName, rule)
+                val encrypted = if (wh.encryptionKey.isNotBlank()) Crypto.encrypt(payload, wh.encryptionKey) else payload
+                val text = if (wh.encryptionKey.isNotBlank()) "(encrypted) $payload" else payload
+                val entry = createEntry(data.sender, payload.take(80), rule, "Webhook (${wh.url.take(40)})", text, data)
                 logRepo.add(entry)
                 entries += entry
             }
         }
 
-        // Fire each entry in parallel — no rule blocks another
         entries.map { entry ->
             scope.async {
                 val rule = rules.find { it.id == entry.ruleId } ?: return@async
-                trySend(entry, text, rule)
+                trySend(entry, data, rule)
             }
         }.awaitAll()
 
         return entries
     }
 
-    /**
-     * Synchronous variant for single-entry retries from the log screen.
-     */
     fun retry(entry: LogEntry, rules: List<ForwardRule>) {
         val rule = rules.find { it.id == entry.ruleId } ?: run {
             logRepo.updateStatus(entry.id, LogStatus.FAILED, "Rule no longer exists")
             return
         }
-        trySend(entry, entry.fullMessage, rule)
+        val data = entry.smsData ?: return
+        trySend(entry, data, rule)
     }
 
-    // -------------------------------------------------------------------------
+    // ── OTP verification ─────────────────────────────────────────────────────
 
-    private fun trySend(entry: LogEntry, text: String, rule: ForwardRule) {
+    fun sendOtpTelegram(otpMessage: String, dest: TelegramDest): Boolean = try {
+        sendTelegram(otpMessage, dest)
+        true
+    } catch (_: Exception) { false }
+
+    fun sendOtpWebhook(otpMessage: String, dest: WebhookDest): Boolean = try {
+        val payload = """[{"SendNumber":"VERIFY","SendName":"","LineNumber":"any","ReceiveTime":"","SendTime":"","Body":"$otpMessage","MethodName":"Web"}]"""
+        sendWebhookRaw(payload, dest)
+        true
+    } catch (_: Exception) { false }
+
+    // ── Quick test (no OTP) ──────────────────────────────────────────────────
+
+    fun quickTestTelegram(text: String, dest: TelegramDest): Boolean = try {
+        sendTelegram(text, dest)
+        true
+    } catch (e: Exception) { false }
+
+    fun quickTestWebhook(text: String, dest: WebhookDest): Boolean = try {
+        val payload = """[{"SendNumber":"TEST","SendName":"","LineNumber":"any","ReceiveTime":"","SendTime":"","Body":"$text","MethodName":"Web"}]"""
+        sendWebhookRaw(payload, dest)
+        true
+    } catch (_: Exception) { false }
+
+    // ── Internal ─────────────────────────────────────────────────────────────
+
+    private fun trySend(entry: LogEntry, data: SmsData, rule: ForwardRule) {
         try {
             if (entry.destination.startsWith("Telegram")) {
-                rule.telegram?.let { sendTelegram(text, it) }
+                rule.telegram?.let { sendTelegram(entry.fullMessage, it) }
             } else {
-                rule.webhook?.let { sendWebhook(text, it) }
+                rule.webhook?.let { wh ->
+                    val payload = buildWebhookPayload(data, getMethodName(rule), rule)
+                    if (wh.encryptionKey.isNotBlank()) {
+                        sendWebhookRaw(Crypto.encrypt(payload, wh.encryptionKey), wh)
+                    } else {
+                        sendWebhookRaw(payload, wh)
+                    }
+                }
             }
             logRepo.updateStatus(entry.id, LogStatus.SUCCESS)
         } catch (e: Exception) {
@@ -95,21 +130,33 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
         }
     }
 
-    private fun createEntry(
-        sender: String,
-        fullMessage: String,
-        rule: ForwardRule,
-        destination: String
-    ) = LogEntry(
-        sender         = sender,
-        messagePreview = fullMessage.take(80),
-        ruleName       = rule.name,
-        destination    = destination,
-        fullMessage    = fullMessage,
-        ruleId         = rule.id
-    )
+    private fun getMethodName(rule: ForwardRule): String {
+        val methods = mutableListOf<String>()
+        if (rule.telegram != null) methods.add("Telegram")
+        if (rule.webhook != null) methods.add("Web")
+        return methods.joinToString(", ")
+    }
 
-    // -------------------------------------------------------------------------
+    private fun formatTelegram(data: SmsData): String {
+        val simTag = when (data.simSlot) { SimSlot.SIM_1 -> "SIM 1"; SimSlot.SIM_2 -> "SIM 2"; else -> "SIM ?" }
+        val date = Date(data.receiveTime).toString()
+        return "📱 *$simTag* — From *${escapeMarkdown(data.sender)}* at $date\n\n${highlightCode(data.body)}"
+    }
+
+    private fun buildWebhookPayload(data: SmsData, methodName: String, rule: ForwardRule): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd  HH:mm:ss", Locale.getDefault())
+        val line = when (data.simSlot) { SimSlot.SIM_1 -> "Line1"; SimSlot.SIM_2 -> "Line2"; else -> "any" }
+        val obj = JsonObject().apply {
+            addProperty("SendNumber", data.sender)
+            addProperty("SendName", "")
+            addProperty("LineNumber", line)
+            addProperty("ReceiveTime", sdf.format(Date(data.receiveTime)))
+            addProperty("SendTime", sdf.format(Date()))
+            addProperty("Body", data.body)
+            addProperty("MethodName", methodName)
+        }
+        return "[$obj]"
+    }
 
     private fun sendTelegram(text: String, dest: TelegramDest) {
         dest.chatIds.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { chatId ->
@@ -127,24 +174,53 @@ class ForwardDispatcher(private val logRepo: LogRepository) {
                 .addHeader("content-type", "application/json")
                 .build()
             val resp = client.newCall(req).execute()
-            val body  = resp.body?.string() ?: ""
-            val code  = resp.code
+            val body = resp.body?.string() ?: ""
+            val code = resp.code
             resp.close()
             if (!resp.isSuccessful) throw Exception("HTTP $code: $body")
         }
     }
 
-    private fun sendWebhook(text: String, dest: WebhookDest) {
-        val payload = JsonObject().apply { addProperty("message", text) }
+    private fun sendWebhookRaw(payload: String, dest: WebhookDest) {
         val builder = Request.Builder()
             .url(dest.url)
-            .post(payload.toString().toRequestBody(JSON_TYPE))
+            .post(payload.toRequestBody(JSON_TYPE))
             .addHeader("content-type", "application/json")
         if (dest.authHeader.isNotBlank()) builder.addHeader("Authorization", dest.authHeader)
         val resp = client.newCall(builder.build()).execute()
-        val body  = resp.body?.string() ?: ""
-        val code  = resp.code
+        val body = resp.body?.string() ?: ""
+        val code = resp.code
         resp.close()
         if (!resp.isSuccessful) throw Exception("HTTP $code: $body")
+    }
+
+    private fun createEntry(
+        sender: String,
+        preview: String,
+        rule: ForwardRule,
+        destination: String,
+        fullMessage: String,
+        smsData: SmsData
+    ) = LogEntry(
+        sender = sender,
+        messagePreview = preview,
+        ruleName = rule.name,
+        destination = destination,
+        fullMessage = fullMessage,
+        smsData = smsData,
+        ruleId = rule.id
+    )
+
+    private fun highlightCode(text: String): String {
+        var result = text
+        "\\d{4,}|[A-Z\\d]{4,}".toRegex().findAll(result).forEach {
+            result = result.replace(it.value, "`${it.value}`")
+        }
+        return result
+    }
+
+    private fun escapeMarkdown(input: String?): String {
+        if (input.isNullOrEmpty()) return ""
+        return input.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`").replace("[", "\\[")
     }
 }

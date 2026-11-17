@@ -11,13 +11,11 @@
 
         <!-- Rule name -->
         <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
             android:hint="@string/hint_rule_name">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etRuleName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:inputType="text" android:imeOptions="actionNext" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -67,6 +65,22 @@
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:inputType="text" android:imeOptions="actionNext" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Verify button + status -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+
+                <Button android:id="@+id/btnVerifyTelegram"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/btn_verify" android:textSize="13sp" />
+
+                <TextView android:id="@+id/tvTelegramStatus"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp" android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ═══ Webhook section ═══ -->
@@ -96,19 +110,38 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etAuthHeader"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:inputType="text" android:imeOptions="actionDone" />
+                    android:inputType="text" android:imeOptions="actionNext" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:hint="@string/hint_enc_key">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etEncKey"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:inputType="textPassword" android:imeOptions="actionDone" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Verify button + status -->
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+
+                <Button android:id="@+id/btnVerifyWebhook"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/btn_verify" android:textSize="13sp" />
+
+                <TextView android:id="@+id/tvWebhookStatus"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp" android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Buttons -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="24dp" android:orientation="horizontal" android:gravity="end">
-
-            <Button android:id="@+id/btnTestRule"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="@string/btn_test_rule" />
 
             <Button android:id="@+id/btnCancel"
                 style="@style/Widget.MaterialComponents.Button.TextButton"

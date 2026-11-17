@@ -194,16 +194,20 @@ class MainActivity : BaseActivity() {
                 return@launch
             }
 
-            val testText = "🔧 *TEST* — SMS Forwarder test message\nThis verifies that your rules are working correctly."
+            val testData = com.example.smsfrowarder.model.SmsData(
+                sender = "TEST_SENDER",
+                body = "Test message from SMS Forwarder. Your rules are working.",
+                simSlot = com.example.smsfrowarder.model.SimSlot.ANY,
+                receiveTime = System.currentTimeMillis()
+            )
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@MainActivity, getString(R.string.test_running), Toast.LENGTH_SHORT).show()
             }
 
             val dispatcher = ForwardDispatcher(App.get(this@MainActivity).logRepository)
-            dispatcher.dispatch(testText, "TEST_SENDER", rules)
+            dispatcher.dispatch(testData, rules)
 
-            // Wait briefly then read results
             kotlinx.coroutines.delay(2000)
             val entries = App.get(this@MainActivity).logRepository.getAll()
                 .filter { it.ruleId in rules.map { r -> r.id } && it.sender == "TEST_SENDER" }

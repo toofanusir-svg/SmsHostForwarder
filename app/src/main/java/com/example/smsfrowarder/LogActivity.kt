@@ -78,7 +78,6 @@ class LogActivity : BaseActivity() {
     private fun retryEntry(entry: LogEntry) {
         lifecycleScope.launch(Dispatchers.IO) {
             val rules = rulesRepo.getRules()
-            // mark pending before retry
             logRepo.updateStatus(entry.id, LogStatus.PENDING, "")
             withContext(Dispatchers.Main) { refreshList() }
             ForwardDispatcher(logRepo).retry(entry, rules)

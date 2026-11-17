@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">ارسال‌کننده پیامک</string>
-
     <string name="title_rules">قوانین ارسال</string>
     <string name="btn_start">شروع</string>
     <string name="btn_stop">توقف</string>
     <string name="btn_test">تست</string>
+    <string name="btn_verify">تایید</string>
     <string name="menu_settings">تنظیمات</string>
     <string name="menu_log">لاگ</string>
     <string name="confirm_delete_title">حذف قانون</string>
@@ -15,11 +15,9 @@
     <string name="warn_permissions">برخی مجوزها رد شدند؛ ممکن است برنامه درست کار نکند.</string>
     <string name="label_unnamed_rule">قانون بدون نام</string>
     <string name="label_any_sender">هر فرستنده‌ای</string>
-
     <string name="sim_any">هر سیم‌کارت</string>
     <string name="sim_1">سیم‌کارت اول</string>
     <string name="sim_2">سیم‌کارت دوم</string>
-
     <string name="title_new_rule">قانون جدید</string>
     <string name="title_edit_rule">ویرایش قانون</string>
     <string name="hint_rule_name">نام قانون</string>
@@ -32,13 +30,30 @@
     <string name="hint_chat_ids">شناسه چت‌ها (با کاما جدا کنید)</string>
     <string name="hint_webhook_url">آدرس وب‌هوک (https://…)</string>
     <string name="hint_auth_header">هدر Authorization (اختیاری)</string>
+    <string name="hint_enc_key">کلید رمزنگاری (خالی = بدون رمزنگاری)</string>
     <string name="btn_save">ذخیره</string>
     <string name="btn_test_rule">تست</string>
     <string name="error_token_chatid_required">توکن ربات و شناسه چت الزامی است</string>
     <string name="error_url_required">یک آدرس معتبر وارد کنید</string>
     <string name="error_no_destination">حداقل یک مقصد (تلگرام یا وب‌هوک) انتخاب کنید</string>
+    <string name="error_telegram_not_verified">تلگرام تایید نشده. ابتدا دکمه تایید را بزنید.</string>
+    <string name="error_webhook_not_verified">وب‌هوک تایید نشده. ابتدا دکمه تایید را بزنید.</string>
     <string name="rule_saved">قانون ذخیره شد</string>
-
+    <string name="verified">تایید شده</string>
+    <string name="not_verified">تایید نشده</string>
+    <!-- OTP -->
+    <string name="otp_message">کد تایید شما: %s</string>
+    <string name="otp_sending">در حال ارسال کد تایید…</string>
+    <string name="otp_send_failed">ارسال کد تایید ناموفق بود. تنظیمات را بررسی کنید.</string>
+    <string name="otp_enter_title">وارد کردن کد تایید</string>
+    <string name="otp_enter_msg">کد ۶ رقمی دریافتی را وارد کنید:</string>
+    <string name="otp_verified_ok">✅ با موفقیت تایید شد!</string>
+    <string name="otp_wrong">❌ کد اشتباه است. دوباره تلاش کنید.</string>
+    <!-- Encryption warning -->
+    <string name="enc_warning_title">بدون کلید رمزنگاری</string>
+    <string name="enc_warning_msg">بدون کلید رمزنگاری، داده‌ها به صورت رمزنگاری‌نشده به وب‌هوک ارسال می‌شوند. ادامه می‌دهید؟</string>
+    <string name="enc_warning_confirm">ارسال بدون رمزنگاری</string>
+    <!-- Settings -->
     <string name="title_settings">تنظیمات</string>
     <string name="label_language">زبان</string>
     <string name="rb_lang_en">English</string>
@@ -47,19 +62,25 @@
     <string name="rb_theme_light">روشن</string>
     <string name="rb_theme_dark">تاریک</string>
     <string name="btn_apply">اعمال</string>
-
+    <!-- Log -->
     <string name="title_log">لاگ ارسال</string>
     <string name="log_retry">تلاش مجدد</string>
     <string name="log_clear_btn">پاک کردن لاگ</string>
     <string name="log_clear_title">پاک کردن همه لاگ‌ها؟</string>
     <string name="log_clear_msg">تاریخچه ارسال حذف می‌شود.</string>
-
-    <string name="notif_title">ارسال‌کننده پیامک فعال است</string>
-    <string name="notif_text">قوانین ارسال در حال اجرا هستند</string>
-
+    <!-- Send confirm -->
+    <string name="send_confirm_title">در حال ارسال پیامک</string>
+    <string name="send_confirm_msg">این پیام در چند ثانیه ارسال می‌شود. برای توقف سرویس دکمه انصراف را بزنید.</string>
+    <string name="send_confirm_in">ارسال در</string>
+    <string name="send_confirm_seconds">ثانیه</string>
+    <string name="send_confirm_cancel">انصراف و توقف سرویس</string>
+    <!-- Test -->
     <string name="test_title">نتایج تست</string>
     <string name="test_running">در حال ارسال پیام تست…</string>
     <string name="test_no_rules">هیچ قانون فعالی برای تست وجود ندارد.</string>
     <string name="test_result">موفق: %1$d\nناموفق: %2$d\n\nبرای جزئیات به لاگ مراجعه کنید.</string>
     <string name="test_no_response">پاسخی دریافت نشد. توکن و شبکه را بررسی کنید.</string>
+    <!-- Notification -->
+    <string name="notif_title">ارسال‌کننده پیامک فعال است</string>
+    <string name="notif_text">قوانین ارسال در حال اجرا هستند</string>
 </resources>
