@@ -1,0 +1,65 @@
+name: Build Windows Decoder
+
+on:
+  push:
+    branches: [ master, main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build SmsDecoder.exe
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=0.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish single-file EXE
+        run: |
+          dotnet publish windows-decoder/SmsDecoder/SmsDecoder.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:Version=${{ steps.version.outputs.VERSION }} `
+            -o artifacts/windows
+
+      - name: Rename EXE
+        shell: bash
+        run: |
+          mv artifacts/windows/SmsDecoder.exe \
+             "artifacts/windows/SmsDecoder-${{ steps.version.outputs.VERSION }}.exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmsDecoder-Windows-${{ steps.version.outputs.VERSION }}
+          path: artifacts/windows/SmsDecoder-*.exe
+          retention-days: 30
+
+      - name: Add to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/windows/SmsDecoder-*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
