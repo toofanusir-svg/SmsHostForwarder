@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: Build & Release APKs
 
 on:
   push:
@@ -11,10 +11,10 @@ on:
 
 jobs:
   build:
-    name: Build APK
+    name: Build APKs
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # required for creating GitHub Releases
+      contents: write
 
     steps:
       - name: Checkout source
@@ -38,7 +38,7 @@ jobs:
             echo "$KEYSTORE_BASE64" | base64 --decode > release.jks
             echo "Keystore decoded."
           else
-            echo "No keystore secret — APK will be unsigned (debug-signed by Gradle)."
+            echo "No keystore — APK will be debug-signed."
           fi
 
       - name: Set version
@@ -52,30 +52,47 @@ jobs:
           echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
           echo "VERSION_CODE=${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      - name: Build release APK
+      # ── Build SMS Forwarder ────────────────────────────────────────────────
+      - name: Build SMS Forwarder APK
         env:
           KEYSTORE_BASE64:    ${{ secrets.KEYSTORE_BASE64 }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS:          ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:       ${{ secrets.KEY_PASSWORD }}
         run: |
-          ./gradlew assembleRelease \
+          ./gradlew :app:assembleRelease \
             -PversionCode=${{ steps.version.outputs.VERSION_CODE }} \
             -PversionName=${{ steps.version.outputs.VERSION_NAME }}
 
-      - name: Rename APK
+      # ── Build SMS Decoder ──────────────────────────────────────────────────
+      - name: Build SMS Decoder APK
+        env:
+          KEYSTORE_BASE64:    ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS:          ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD:       ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew :decoder:assembleRelease \
+            -PversionCode=${{ steps.version.outputs.VERSION_CODE }} \
+            -PversionName=${{ steps.version.outputs.VERSION_NAME }}
+
+      # ── Collect APKs ──────────────────────────────────────────────────────
+      - name: Collect APKs
         run: |
           mkdir -p artifacts
           cp app/build/outputs/apk/release/*.apk \
              "artifacts/SmsForwarder-${{ steps.version.outputs.VERSION_NAME }}.apk"
+          cp decoder/build/outputs/apk/release/*.apk \
+             "artifacts/SmsDecoder-${{ steps.version.outputs.VERSION_NAME }}.apk"
 
-      - name: Upload APK artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SmsForwarder-${{ steps.version.outputs.VERSION_NAME }}
+          name: APKs-${{ steps.version.outputs.VERSION_NAME }}
           path: artifacts/*.apk
           retention-days: 30
 
+      # ── GitHub Release ────────────────────────────────────────────────────
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -84,11 +101,14 @@ jobs:
           body: |
             ## SMS Forwarder v${{ steps.version.outputs.VERSION_NAME }}
 
-            ### Install
-            Download the APK file and install it on your Android device.
+            ### APKs
+            - **SmsForwarder** — forwards SMS/calls to Telegram and/or Webhook
+            - **SmsDecoder** — decrypts webhook messages on the receiver's device
 
-            ### Changes
-            See [Commits](../../commits/${{ github.ref_name }}) for full changelog.
+            ### Install
+            Download both APKs and install on your Android device (API 26+).
+
+            See [Commits](../../commits/${{ github.ref_name }}) for changelog.
           files: artifacts/*.apk
           draft: false
           prerelease: false

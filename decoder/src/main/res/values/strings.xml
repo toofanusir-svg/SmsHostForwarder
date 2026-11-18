@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">SMS Decoder</string>
+    <string name="app_subtitle">Decrypt messages from SMS Forwarder webhook</string>
+    <string name="label_enc_key">Encryption Key</string>
+    <string name="hint_enc_key">Same key used in SMS Forwarder rule</string>
+    <string name="btn_save_key">Save</string>
+    <string name="label_encoded_input">Encoded Message</string>
+    <string name="hint_encoded_input">Paste or share the encoded message here</string>
+    <string name="btn_decode">Decode</string>
+    <string name="btn_dismiss">Dismiss</string>
+    <string name="key_saved">Key saved</string>
+    <string name="error_no_key">Please enter or save an encryption key first.</string>
+    <string name="error_no_input">Please enter or share an encoded message.</string>
+    <string name="decode_error">Decryption failed: %s</string>
+</resources>

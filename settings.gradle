@@ -7,3 +7,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SmsFrowarder"
 include ':app'
+include ':decoder'

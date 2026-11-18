@@ -4,15 +4,19 @@ An Android app that forwards incoming SMS and call information to your Telegram 
 
 📖 **[فارسی — مستندات فارسی](README-FA.md)**
 
+> **Fork notice:** This project is a fork of [vovaksenov99/SmsHostForwarder](https://github.com/vovaksenov99/SmsHostForwarder).
+> The original app supported forwarding to Telegram only. This fork adds rule-based forwarding, webhook support, OTP verification, AES-256 encryption, a forward log, per-rule testing, language/theme settings, and a companion Decoder app.
+
 [![GitHub release](https://img.shields.io/github/v/release/toofanusir-svg/SmsHostForwarder)](https://github.com/toofanusir-svg/SmsHostForwarder/releases)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9-orange)]()
-
+[![Based on](https://img.shields.io/badge/based%20on-vovaksenov99%2FSmsHostForwarder-blue)](https://github.com/vovaksenov99/SmsHostForwarder)
 ---
 
 ## Table of Contents
 
 - [Features](#features)
+- [SMS Decoder App](#sms-decoder-app)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [How It Works](#how-it-works)
@@ -46,6 +50,39 @@ An Android app that forwards incoming SMS and call information to your Telegram 
 - **Light and Dark theme**
 - **Background service** — runs continuously, survives device reboot
 - **Android 8.0+ support** (API 26+)
+
+## SMS Decoder App
+
+The **SMS Decoder** is a companion app included in this project. It decrypts webhook messages that were encrypted by the SMS Forwarder.
+
+### When do you need it?
+If you configured a webhook rule with an **Encryption Key**, every message sent to your webhook is AES-256 encrypted. The Decoder app lets you read the original text on any Android device.
+
+### Installation
+Download `SmsDecoder-x.x.x.apk` from the [Releases page](https://github.com/toofanusir-svg/SmsHostForwarder/releases).
+
+### How to use
+
+**Method 1 — Manual paste:**
+1. Open SMS Decoder
+2. Enter the same encryption key you set in the forwarding rule → tap **Save**
+3. Paste the encrypted message into the input field
+4. Tap **Decode** → the original text appears below
+5. Tap **Dismiss** to hide the result
+
+**Method 2 — Share from another app:**
+1. In any app (chat, email, notes), select the encrypted text
+2. Tap **Share** → choose **SMS Decoder**
+3. The app opens with the text pre-filled, tap **Decode**
+
+### Encrypted message format
+The SMS Forwarder sends encrypted messages as:
+```json
+{"message": "{\"encrypted\":true,\"iv\":\"...\",\"data\":\"...\"}"}
+```
+The Decoder handles both the outer `{"message":"..."}` wrapper and the raw inner format automatically.
+
+---
 
 ## Requirements
 
