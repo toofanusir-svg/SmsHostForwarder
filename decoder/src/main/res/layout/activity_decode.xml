@@ -94,6 +94,17 @@
 
         <!-- Result (hidden until decode) -->
         <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:padding="8dp"
+            android:textSize="13sp"
+            android:textColor="@android:color/white"
+            android:background="#1A018786"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/tvDecodeResult"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

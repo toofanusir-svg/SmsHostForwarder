@@ -9,6 +9,7 @@
     <string name="btn_decode">Decode</string>
     <string name="btn_dismiss">Dismiss</string>
     <string name="key_saved">Key saved</string>
+    <string name="status_input_received">✅ Shared text received — tap Decode</string>
     <string name="error_no_key">Please enter or save an encryption key first.</string>
     <string name="error_no_input">Please enter or share an encoded message.</string>
     <string name="decode_error">Decryption failed: %s</string>

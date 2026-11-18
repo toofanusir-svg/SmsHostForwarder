@@ -9,6 +9,7 @@
     <string name="btn_decode">رمزگشایی</string>
     <string name="btn_dismiss">بستن</string>
     <string name="key_saved">کلید ذخیره شد</string>
+    <string name="status_input_received">✅ متن دریافت شد — رمزگشایی را بزنید</string>
     <string name="error_no_key">لطفاً ابتدا کلید رمزنگاری را وارد یا ذخیره کنید.</string>
     <string name="error_no_input">لطفاً یک پیام رمزنگاری‌شده وارد یا share کنید.</string>
     <string name="decode_error">رمزگشایی ناموفق: %s</string>
