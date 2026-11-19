@@ -3,6 +3,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
+// Alias to avoid ambiguity with System.Windows.Controls.TextBox and System.Windows.Clipboard
+using WinForms = System.Windows.Forms;
+using WpfClipboard = System.Windows.Clipboard;
+
 namespace SmsDecoder;
 
 public partial class MainWindow : Window
@@ -14,7 +18,7 @@ public partial class MainWindow : Window
     private bool   _suppressInputChange = false;   // avoid re-entry in TextChanged
 
     // Tray
-    private System.Windows.Forms.NotifyIcon? _trayIcon;
+    private WinForms.NotifyIcon? _trayIcon;
     private bool _reallyClose = false;
 
     private static readonly string SettingsFile =
@@ -34,20 +38,16 @@ public partial class MainWindow : Window
 
     private void SetupTray()
     {
-        _trayIcon = new System.Windows.Forms.NotifyIcon
+        _trayIcon = new WinForms.NotifyIcon
         {
             Icon    = System.Drawing.SystemIcons.Information,
             Text    = "SMS Decoder",
             Visible = false
         };
-
-        // Double-click to restore
         _trayIcon.DoubleClick += (_, _) => ShowFromTray();
-
-        // Right-click context menu
-        var menu = new System.Windows.Forms.ContextMenuStrip();
+        var menu = new WinForms.ContextMenuStrip();
         menu.Items.Add("Open", null, (_, _) => ShowFromTray());
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add("Exit",  null, (_, _) => ExitApp());
         _trayIcon.ContextMenuStrip = menu;
     }
@@ -89,7 +89,7 @@ public partial class MainWindow : Window
     {
         Hide();
         _trayIcon!.Visible = true;
-        _trayIcon.ShowBalloonTip(1500, "SMS Decoder", "Running in background", System.Windows.Forms.ToolTipIcon.Info);
+        _trayIcon.ShowBalloonTip(1500, "SMS Decoder", "Running in background", WinForms.ToolTipIcon.Info);
     }
 
     // ── Key management ───────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ public partial class MainWindow : Window
     private void ClipTimer_Tick(object? sender, EventArgs e)
     {
         string clip;
-        try { clip = Clipboard.GetText(); } catch { return; }
+        try { clip = WpfClipboard.GetText(); } catch { return; }
         if (string.IsNullOrWhiteSpace(clip) || clip == _lastClipboard) return;
         _lastClipboard = clip;
 
@@ -236,7 +236,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var text = Clipboard.GetText();
+            var text = WpfClipboard.GetText();
             if (!string.IsNullOrEmpty(text))
                 tbInput.Text = text;
         }
@@ -282,7 +282,7 @@ public partial class MainWindow : Window
     {
         if (!string.IsNullOrEmpty(tbResult.Text))
         {
-            Clipboard.SetText(tbResult.Text);
+            WpfClipboard.SetText(tbResult.Text);
             SetStatus("📋 Copied", false);
         }
     }
