@@ -1,129 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+    <!-- Title -->
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="@string/app_name" android:textSize="20sp" android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary" android:paddingBottom="2dp" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="@string/app_subtitle" android:textSize="12sp"
+        android:textColor="?android:attr/textColorSecondary" android:paddingBottom="12dp" />
 
-        <!-- App title -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary"
-            android:paddingBottom="4dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/app_subtitle"
-            android:textSize="13sp"
-            android:textColor="?android:attr/textColorSecondary"
-            android:paddingBottom="16dp" />
-
-        <!-- Encryption key section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/label_enc_key"
-            android:textSize="13sp"
-            android:textColor="?android:attr/textColorSecondary" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="4dp">
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etDecodeKey"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:hint="@string/hint_enc_key" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <Button
-                android:id="@+id/btnSaveKey"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/btn_save_key" />
-        </LinearLayout>
-
-        <!-- Encoded input -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/label_encoded_input"
-            android:textSize="13sp"
-            android:textColor="?android:attr/textColorSecondary" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:hint="@string/hint_encoded_input">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEncodedInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="3" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Decode button -->
-        <Button
-            android:id="@+id/btnDecode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/btn_decode" />
-
-        <!-- Result (hidden until decode) -->
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:padding="8dp"
-            android:textSize="13sp"
-            android:textColor="@android:color/white"
-            android:background="#1A018786"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/tvDecodeResult"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:padding="12dp"
-            android:background="?android:attr/colorControlHighlight"
-            android:textSize="14sp"
-            android:textIsSelectable="true"
-            android:visibility="gone" />
-
-        <!-- Dismiss button -->
-        <Button
-            android:id="@+id/btnDismiss"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/btn_dismiss"
-            android:visibility="gone" />
-
+    <!-- Auto-decode toggle -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingBottom="12dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="@string/label_auto_decode"
+            android:textSize="13sp" android:textColor="?android:attr/textColorPrimary" />
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/swAutoDecode"
+            android:layout_width="wrap_content" android:layout_height="wrap_content" />
     </LinearLayout>
-</ScrollView>
+
+    <!-- Key row -->
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/label_enc_key" android:textSize="12sp"
+        android:textColor="?android:attr/textColorSecondary" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="4dp"
+        android:paddingBottom="12dp">
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etDecodeKey"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="textPassword" android:hint="@string/hint_enc_key" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <Button android:id="@+id/btnSaveKey"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="8dp" android:text="@string/btn_save_key" />
+    </LinearLayout>
+
+    <!-- Input label + Paste button -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="@string/label_encoded_input"
+            android:textSize="12sp" android:textColor="?android:attr/textColorSecondary" />
+        <Button android:id="@+id/btnPaste"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="12sp" android:text="@string/btn_paste" />
+    </LinearLayout>
+
+    <!-- Input box (smaller — 3 lines) -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="4dp" android:hint="@string/hint_encoded_input">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etEncodedInput"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:inputType="textMultiLine" android:minLines="2" android:maxLines="4" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Action buttons -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="12dp"
+        android:paddingBottom="8dp">
+        <Button android:id="@+id/btnDecode"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:layout_marginEnd="8dp"
+            android:text="@string/btn_decode" />
+        <Button android:id="@+id/btnClearAll"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/btn_clear" />
+    </LinearLayout>
+
+    <!-- Status -->
+    <TextView android:id="@+id/tvStatus"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="8dp" android:textSize="13sp"
+        android:textColor="@android:color/white"
+        android:background="#1A018786" android:visibility="gone" />
+
+    <!-- Result (larger — fills remaining space) -->
+    <TextView android:id="@+id/tvDecodeResult"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:padding="12dp"
+        android:background="?android:attr/colorControlHighlight"
+        android:textSize="14sp"
+        android:textIsSelectable="true"
+        android:visibility="gone" />
+
+    <!-- Bottom buttons -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="8dp"
+        android:visibility="gone" android:id="@+id/layoutBottomBtns">
+        <Button android:id="@+id/btnCopyResult"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:layout_marginEnd="8dp"
+            android:text="@string/btn_copy_result" />
+        <Button android:id="@+id/btnDismiss"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/btn_dismiss" />
+    </LinearLayout>
+
+</LinearLayout>
