@@ -119,7 +119,7 @@ public partial class MainWindow : Window
 
         if (_keyVisible)
         {
-            var tb = new TextBox
+            var tb = new System.Windows.Controls.TextBox
             {
                 Text             = pbKey.Password,
                 Background       = pbKey.Background,
@@ -138,7 +138,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            var tb = parent.Children.OfType<TextBox>().FirstOrDefault(x => x.Name == "tbKeyVisible");
+            var tb = parent.Children.OfType<System.Windows.Controls.TextBox>().FirstOrDefault(x => x.Name == "tbKeyVisible");
             if (tb != null)
             {
                 pbKey.Password = tb.Text;
@@ -151,7 +151,7 @@ public partial class MainWindow : Window
     private string GetKey()
     {
         var parent = (Grid)pbKey.Parent;
-        var tb     = parent?.Children.OfType<TextBox>().FirstOrDefault(x => x.Name == "tbKeyVisible");
+        var tb     = parent?.Children.OfType<System.Windows.Controls.TextBox>().FirstOrDefault(x => x.Name == "tbKeyVisible");
         return (tb?.Text ?? pbKey.Password).Trim();
     }
 
