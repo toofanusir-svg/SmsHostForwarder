@@ -64,7 +64,7 @@ public partial class MainWindow : Window
     {
         _reallyClose = true;
         _trayIcon?.Dispose();
-        Application.Current.Shutdown();
+        System.Windows.Application.Current.Shutdown();
     }
 
     // ── Window events ─────────────────────────────────────────────────────────

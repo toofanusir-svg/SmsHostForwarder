@@ -59,7 +59,7 @@ class DecodeActivity : AppCompatActivity() {
         // Paste
         findViewById<Button>(R.id.btnPaste).setOnClickListener {
             val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val text = cm.primaryClip?.getItemAt(0)?.getText(contentResolver)?.toString() ?: ""
+            val text = cm.primaryClip?.getItemAt(0)?.getText()?.toString() ?: ""
             if (text.isNotEmpty()) {
                 suppressWatch = true
                 etInput.setText(text)
