@@ -9,6 +9,8 @@
 [![GitHub release](https://img.shields.io/github/v/release/toofanusir-svg/SmsHostForwarder)](https://github.com/toofanusir-svg/SmsHostForwarder/releases)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green)]()
 
+> 📱 **اندروید 10+ دارید؟** نسخه v2 برای رفع مشکل دریافت SMS روی Xiaomi HyperOS و Samsung One UI 7 موجود است — [بخش نسخه v2 ↓](#نسخه-v2--اندروید-10)
+
 ---
 
 ## فهرست
@@ -244,3 +246,32 @@ Authorization: Bearer my-secret-token
 - داده‌های قانون (توکن‌ها، آدرس‌ها) در حافظه خصوصی برنامه ذخیره می‌شوند
 - `allowBackup="false"` — داده‌ها در بکاپ سیستم نیستند
 - اعتبارسنجی گواهینامه SSL/TLS فعال است
+
+---
+
+## نسخه v2 — اندروید 10+
+
+یک بیلد مجزا برای **اندروید 10+ (API 29+)** که مشکل دریافت SMS روی Xiaomi HyperOS، Samsung One UI 7 و سایر پیاده‌سازی‌های اندروید 13-15 را رفع می‌کند.
+
+### چه تفاوتی با نسخه اصلی دارد؟
+
+| مشکل | راه‌حل |
+|------|--------|
+| SMS روی اندروید 13-15 دریافت نمی‌شود | `StaticSmsReceiver` در Manifest با `priority=999` — Xiaomi HyperOS به dynamic receiver در پس‌زمینه دسترسی نمی‌دهد |
+| سرویس توسط مدیریت باتری کشته می‌شود | دیالوگ معافیت از بهینه‌سازی باتری هنگام اجرای اول |
+| بعد از ریبوت در Xiaomi SMS نمی‌رسد | `QUICKBOOT_POWERON` به `StartupReceiver` اضافه شد |
+| Autostart در Xiaomi | دیالوگ راهنما به Security ← Autostart هنگام اجرای اول |
+
+### دانلود نسخه v2
+
+فایل `SmsForwarder-v2-x.x.x.apk` را از [صفحه Releases](https://github.com/toofanusir-svg/SmsHostForwarder/releases) دانلود کنید (نسخه‌های با برچسب `v2-*`).
+
+> **حداقل اندروید:** 10 (API 29).  
+> هر دو APK می‌توانند همزمان نصب باشند (applicationId متفاوت دارند).
+
+### بعد از نصب v2 روی Xiaomi
+
+۱. دیالوگ Autostart را که هنگام اجرای اول ظاهر می‌شود قبول کنید.
+۲. به **Security ← مجوزها ← اجرای خودکار** بروید و SMS Forwarder را فعال کنید.
+۳. به **تنظیمات ← برنامه‌ها ← SMS Forwarder ← باتری ← بدون محدودیت** بروید.
+۴. در برنامه دکمه **Start** را بزنید.

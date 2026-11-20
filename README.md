@@ -11,6 +11,10 @@ An Android app that forwards incoming SMS and call information to your Telegram 
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9-orange)]()
 [![Based on](https://img.shields.io/badge/based%20on-vovaksenov99%2FSmsHostForwarder-blue)](https://github.com/vovaksenov99/SmsHostForwarder)
+
+> 📱 **آیا اندروید 10+ دارید؟** نسخه v2 که برای اندروید 10+ بهینه‌شده و مشکل دریافت SMS روی Xiaomi HyperOS / Samsung One UI 7 را رفع می‌کند را ببینید: [SmsForwarder-v2 ↓](#نسخه-v2--اندروید-10)
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.9-orange)]()
+[![Based on](https://img.shields.io/badge/based%20on-vovaksenov99%2FSmsHostForwarder-blue)](https://github.com/vovaksenov99/SmsHostForwarder)
 ---
 
 ## Table of Contents
@@ -271,3 +275,32 @@ GitHub Actions automatically builds and publishes APKs on every tagged release.
 ## License
 
 This is a pet project. Use it freely at your own risk.
+
+---
+
+## v2 — Android 10+
+
+A separate build targeting **Android 10+ (API 29+)** only. Fixes SMS reception on Xiaomi HyperOS, Samsung One UI 7, and other aggressive Android 13-15 implementations.
+
+### What's different in v2
+
+| Issue | Fix |
+|-------|-----|
+| SMS not received on Android 13-15 | `StaticSmsReceiver` in Manifest (`priority=999`, `RECEIVER_EXPORTED`) — Xiaomi HyperOS blocks dynamic receivers in background |
+| Service killed by battery optimiser | Battery optimisation exemption dialog on first launch |
+| SMS not arriving after reboot on Xiaomi | `QUICKBOOT_POWERON` added to `StartupReceiver` |
+| Xiaomi Autostart | Dialog guides user to Security → Autostart on first launch |
+
+### Download v2
+
+Download `SmsForwarder-v2-x.x.x.apk` from the [Releases page](https://github.com/toofanusir-svg/SmsHostForwarder/releases) (look for releases tagged `v2-*`).
+
+> **Minimum Android version:** 10 (API 29).  
+> Both APKs can be installed side-by-side (different `applicationId`).
+
+### After installing v2 on Xiaomi
+
+1. Accept the Autostart dialog that appears on first launch.
+2. Go to **Security → Permissions → Autostart** and enable SMS Forwarder.
+3. Go to **Settings → Apps → SMS Forwarder → Battery → No restrictions**.
+4. Tap **Start** in the app.
