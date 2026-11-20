@@ -65,7 +65,17 @@ jobs:
         run: |
           ./gradlew :app:assembleRelease \
             -PversionCode=${{ steps.version.outputs.VERSION_CODE }} \
-            -PversionName=${{ steps.version.outputs.VERSION_NAME }}
+            -PversionName=${{ steps.version.outputs.VERSION_NAME }} \
+            2>&1 | tee ../build_output.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-failure
+          path: build_output.txt
+          retention-days: 7
 
       - name: Collect APK
         run: |
