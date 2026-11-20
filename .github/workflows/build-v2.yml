@@ -67,14 +67,13 @@ jobs:
           ./gradlew :app:assembleRelease \
             -PversionCode=${{ steps.version.outputs.VERSION_CODE }} \
             -PversionName=${{ steps.version.outputs.VERSION_NAME }} \
-            --stacktrace 2>&1 | tee build_output.txt
+            2>&1 | tee build_output.txt
           EXIT_CODE=${PIPESTATUS[0]}
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "## Build Failure" >> $GITHUB_STEP_SUMMARY
+            echo "## Build Failure — last 100 lines" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -E "error:|Error |FAILED|Unresolved|\.kt:[0-9]" build_output.txt | tail -60 >> $GITHUB_STEP_SUMMARY || true
+            tail -100 build_output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            cat build_output.txt | tail -80
           fi
           exit $EXIT_CODE
 
