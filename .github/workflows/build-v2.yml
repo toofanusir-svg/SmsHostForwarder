@@ -70,10 +70,11 @@ jobs:
             --stacktrace 2>&1 | tee build_output.txt
           EXIT_CODE=${PIPESTATUS[0]}
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "## Build Failure Log" >> $GITHUB_STEP_SUMMARY
+            echo "## Build Failure" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -E "error:|Error |FAILED|Unresolved|\.kt:[0-9]" build_output.txt | tail -50 >> $GITHUB_STEP_SUMMARY
+            grep -E "error:|Error |FAILED|Unresolved|\.kt:[0-9]" build_output.txt | tail -60 >> $GITHUB_STEP_SUMMARY || true
             echo '```' >> $GITHUB_STEP_SUMMARY
+            cat build_output.txt | tail -80
           fi
           exit $EXIT_CODE
 
@@ -82,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-log-failure
-          path: build_output.txt
+          path: SmsForwarder-v2/build_output.txt
           retention-days: 7
 
       - name: Collect APK
