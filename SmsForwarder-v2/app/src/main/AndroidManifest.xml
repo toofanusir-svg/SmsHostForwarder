@@ -13,7 +13,6 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- API 34+: foreground service data sync type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
         android:minSdkVersion="34" />
 
@@ -24,7 +23,7 @@
     <!-- Notifications (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Battery optimization: let user exempt us from doze -->
+    <!-- Battery optimization exempt -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
@@ -41,13 +40,33 @@
             android:foregroundServiceType="dataSync"
             android:exported="false" />
 
-        <!-- BOOT receiver — not exported, only system BOOT_COMPLETED reaches it -->
+        <!--
+            StaticSmsReceiver — declared in Manifest so the system wakes the
+            process on Xiaomi HyperOS / MIUI even when the app is not running.
+
+            priority="999": deliver before other non-system apps.
+            exported="true" + permission BROADCAST_SMS: only the telephony
+            subsystem (which holds BROADCAST_SMS) can trigger this receiver.
+        -->
+        <receiver
+            android:name=".StaticSmsReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Boot receiver — restarts SmsService after reboot + Xiaomi fast-boot -->
         <receiver
             android:name=".StartupReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>

@@ -102,6 +102,7 @@ class MainActivity : BaseActivity() {
         updateServiceButtons(SmsService.isRunning(this))
         warnIfMultiSimUnavailable()
         checkBatteryOptimization()
+        checkXiaomiAutostart()
 
         val filter = IntentFilter(SmsService.ACTION_STATE_CHANGED)
         registerReceiver(serviceStateReceiver, filter, RECEIVER_NOT_EXPORTED)
@@ -117,6 +118,70 @@ class MainActivity : BaseActivity() {
         btnStop.isEnabled  = running
         btnStart.alpha     = if (running) 0.4f else 1.0f
         btnStop.alpha      = if (running) 1.0f else 0.4f
+    }
+
+    // ── Xiaomi / HyperOS autostart ───────────────────────────────────────────
+
+    /**
+     * On Xiaomi HyperOS / MIUI, apps must be in the "Autostart" whitelist or
+     * the system will not deliver broadcasts (including SMS) when the app is
+     * not in the foreground.  We can't enable it programmatically — we show a
+     * one-time dialog with exact navigation steps.
+     */
+    private fun checkXiaomiAutostart() {
+        if (!isXiaomiDevice()) return
+
+        val prefs = getSharedPreferences("v2_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("xiaomi_asked", false)) return
+
+        prefs.edit().putBoolean("xiaomi_asked", true).apply()
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.xiaomi_autostart_title))
+            .setMessage(getString(R.string.xiaomi_autostart_msg))
+            .setPositiveButton(getString(R.string.xiaomi_autostart_btn_open)) { _, _ ->
+                openXiaomiAutostartSettings()
+            }
+            .setNegativeButton(getString(R.string.btn_cancel), null)
+            .show()
+    }
+
+    private fun isXiaomiDevice(): Boolean {
+        val manufacturer = android.os.Build.MANUFACTURER.lowercase()
+        val brand        = android.os.Build.BRAND.lowercase()
+        return manufacturer.contains("xiaomi") ||
+               manufacturer.contains("redmi")  ||
+               brand.contains("xiaomi")        ||
+               brand.contains("redmi")         ||
+               brand.contains("poco")
+    }
+
+    private fun openXiaomiAutostartSettings() {
+        // Try the direct MIUI/HyperOS autostart settings activity.
+        // Falls back to the generic app info screen if not available.
+        val intents = listOf(
+            Intent().apply {
+                component = android.content.ComponentName(
+                    "com.miui.securitycenter",
+                    "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                )
+            },
+            Intent().apply {
+                component = android.content.ComponentName(
+                    "com.miui.securitycenter",
+                    "com.miui.securitycenter.MainActivity"
+                )
+            },
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
+            }
+        )
+        for (i in intents) {
+            try {
+                startActivity(i)
+                return
+            } catch (_: Exception) { }
+        }
     }
 
     // ── Battery optimization ─────────────────────────────────────────────────
