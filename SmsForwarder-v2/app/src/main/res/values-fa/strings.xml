@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">ارسال‌کننده پیامک</string>
     <string name="title_rules">قوانین ارسال</string>
     <string name="btn_start">شروع</string>
@@ -90,7 +90,6 @@
     <string name="battery_opt_btn_allow">اجازه دادن</string>
     <!-- Xiaomi / HyperOS autostart -->
     <string name="xiaomi_autostart_title">فعال‌سازی اجرای خودکار (شیائومی)</string>
-    <string name="xiaomi_autostart_msg">در شیائومی / HyperOS، برنامه باید در لیست اجرای خودکار باشد تا بتواند پیامک را در پس‌زمینه دریافت کند.\n\nمراحل:\n۱. برنامه Security را باز کنید\n۲. مجوزها → اجرای خودکار\n۳. برای SMS Forwarder فعال کنید\n\nهمچنین:\nتنظیمات ← برنامه‌ها ← SMS Forwarder ← باتری ← بدون محدودیت</string>
+    <string name="xiaomi_autostart_msg">در شیائومی / HyperOS، برنامه باید در لیست اجرای خودکار باشد تا بتواند پیامک را در پس‌زمینه دریافت کند.\n\nمراحل:\n1. برنامه Security را باز کنید\n2. مجوزها - اجرای خودکار\n3. برای SMS Forwarder فعال کنید\n\nهمچنین: تنظیمات - برنامه‌ها - SMS Forwarder - باتری - بدون محدودیت</string>
     <string name="xiaomi_autostart_btn_open">باز کردن تنظیمات</string>
 </resources>
->
