@@ -88,4 +88,9 @@
     <string name="battery_opt_title">غیرفعال کردن بهینه‌سازی باتری</string>
     <string name="battery_opt_msg">اندروید ممکن است این برنامه را در پس‌زمینه متوقف کند و از ارسال پیامک جلوگیری کند. برای جلوگیری از این مشکل، اجازه دهید برنامه از بهینه‌سازی باتری معاف شود.</string>
     <string name="battery_opt_btn_allow">اجازه دادن</string>
+    <!-- Xiaomi / HyperOS autostart -->
+    <string name="xiaomi_autostart_title">فعال‌سازی اجرای خودکار (شیائومی)</string>
+    <string name="xiaomi_autostart_msg">در شیائومی / HyperOS، برنامه باید در لیست اجرای خودکار باشد تا بتواند پیامک را در پس‌زمینه دریافت کند.\n\nمراحل:\n۱. برنامه Security را باز کنید\n۲. مجوزها → اجرای خودکار\n۳. برای SMS Forwarder فعال کنید\n\nهمچنین:\nتنظیمات ← برنامه‌ها ← SMS Forwarder ← باتری ← بدون محدودیت</string>
+    <string name="xiaomi_autostart_btn_open">باز کردن تنظیمات</string>
 </resources>
+>

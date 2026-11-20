@@ -88,4 +88,8 @@
     <string name="battery_opt_title">Disable Battery Optimization</string>
     <string name="battery_opt_msg">Android may stop this app in the background and prevent SMS forwarding. Tap Allow to exempt SMS Forwarder from battery optimization.</string>
     <string name="battery_opt_btn_allow">Allow</string>
-</resources>
+    <!-- Xiaomi / HyperOS autostart -->
+    <string name="xiaomi_autostart_title">Enable Autostart (Xiaomi)</string>
+    <string name="xiaomi_autostart_msg">On Xiaomi / HyperOS, SMS Forwarder must be in the Autostart whitelist to receive SMS in the background.\n\nSteps:\n1. Open Security app\n2. Permissions → Autostart\n3. Enable for SMS Forwarder\n\nAlso go to:\nSettings → Apps → SMS Forwarder → Battery → No restrictions</string>
+    <string name="xiaomi_autostart_btn_open">Open Settings</string>
+</resources>>
