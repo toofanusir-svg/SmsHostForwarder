@@ -1,0 +1,91 @@
+<resources>
+    <string name="app_name">SMS Forwarder</string>
+    <string name="title_rules">Forwarding Rules</string>
+    <string name="btn_start">Start</string>
+    <string name="btn_stop">Stop</string>
+    <string name="btn_test">Test</string>
+    <string name="btn_verify">Verify</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_log">Log</string>
+    <string name="confirm_delete_title">Delete rule</string>
+    <string name="confirm_delete_msg">Delete \"%s\"?</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="warn_multisim">⚠️ This device does not support multi-SIM detection. SIM-specific rules will not match.</string>
+    <string name="warn_permissions">Some permissions were denied; the app may not work correctly.</string>
+    <string name="label_unnamed_rule">Unnamed rule</string>
+    <string name="label_any_sender">any sender</string>
+    <string name="sim_any">Any SIM</string>
+    <string name="sim_1">SIM 1</string>
+    <string name="sim_2">SIM 2</string>
+    <string name="title_new_rule">New Rule</string>
+    <string name="title_edit_rule">Edit Rule</string>
+    <string name="hint_rule_name">Rule name</string>
+    <string name="label_sim_card">SIM card</string>
+    <string name="hint_sender">Sender number (* for any)</string>
+    <string name="label_destination">Destination</string>
+    <string name="rb_telegram">Telegram Bot</string>
+    <string name="rb_webhook">Webhook</string>
+    <string name="hint_bot_token">Bot token</string>
+    <string name="hint_chat_ids">Chat IDs (comma-separated)</string>
+    <string name="hint_webhook_url">Webhook URL (https://…)</string>
+    <string name="hint_auth_header">Authorization header (optional)</string>
+    <string name="hint_enc_key">Encryption key (leave empty for no encryption)</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_test_rule">Test</string>
+    <string name="error_token_chatid_required">Bot token and Chat ID are required</string>
+    <string name="error_url_required">A valid URL is required</string>
+    <string name="error_no_destination">Select at least one destination (Telegram or Webhook)</string>
+    <string name="error_telegram_not_verified">Telegram is not verified. Tap Verify first.</string>
+    <string name="error_webhook_not_verified">Webhook is not verified. Tap Verify first.</string>
+    <string name="rule_saved">Rule saved</string>
+    <string name="verified">Verified</string>
+    <string name="not_verified">Not verified</string>
+    <!-- OTP -->
+    <string name="otp_message">Your verification code is: %s</string>
+    <string name="otp_sending">Sending verification code…</string>
+    <string name="otp_send_failed">Failed to send verification code. Check your settings.</string>
+    <string name="otp_enter_title">Enter Verification Code</string>
+    <string name="otp_enter_msg">Enter the 6-digit code you received:</string>
+    <string name="otp_verified_ok">✅ Verified successfully!</string>
+    <string name="otp_wrong">❌ Wrong code. Try again.</string>
+    <!-- Encryption warning -->
+    <string name="enc_warning_title">No Encryption Key</string>
+    <string name="enc_warning_msg">Without an encryption key, data will be sent unencrypted to your webhook. Continue?</string>
+    <string name="enc_warning_confirm">Send Unencrypted</string>
+    <!-- Settings -->
+    <string name="title_settings">Settings</string>
+    <string name="label_language">Language</string>
+    <string name="rb_lang_en">English</string>
+    <string name="rb_lang_fa">فارسی</string>
+    <string name="label_theme">Theme</string>
+    <string name="rb_theme_light">Light</string>
+    <string name="rb_theme_dark">Dark</string>
+    <string name="btn_apply">Apply</string>
+    <!-- Log -->
+    <string name="title_log">Forward Log</string>
+    <string name="log_retry">Retry</string>
+    <string name="log_clear_btn">Clear Log</string>
+    <string name="log_clear_title">Clear all logs?</string>
+    <string name="log_clear_msg">This will delete all forwarding history.</string>
+    <!-- Send confirm -->
+    <string name="send_confirm_title">Forwarding SMS</string>
+    <string name="send_confirm_msg">This message will be forwarded. Tap cancel to stop the service.</string>
+    <string name="send_confirm_from">From: %s</string>
+    <string name="send_confirm_in">Sending in</string>
+    <string name="send_confirm_seconds">seconds</string>
+    <string name="send_confirm_cancel">Cancel &amp; Stop Service</string>
+    <!-- Test -->
+    <string name="test_title">Test Results</string>
+    <string name="test_running">Sending test message…</string>
+    <string name="test_no_rules">No enabled rules to test.</string>
+    <string name="test_result">Success: %1$d\nFailed: %2$d\n\nCheck the Log for details.</string>
+    <string name="test_no_response">No response received. Check your token and network.</string>
+    <!-- Notification -->
+    <string name="notif_title">SMS Forwarder active</string>
+    <string name="notif_text">Forwarding rules are running</string>
+    <!-- Battery optimization (Android 10+) -->
+    <string name="battery_opt_title">Disable Battery Optimization</string>
+    <string name="battery_opt_msg">Android may stop this app in the background and prevent SMS forwarding. Tap Allow to exempt SMS Forwarder from battery optimization.</string>
+    <string name="battery_opt_btn_allow">Allow</string>
+</resources>

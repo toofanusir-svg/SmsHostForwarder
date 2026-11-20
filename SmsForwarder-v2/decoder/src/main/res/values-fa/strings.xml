@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">رمزگشای پیامک</string>
+    <string name="app_subtitle">رمزگشایی پیام‌های وب‌هوک برنامه ارسال‌کننده</string>
+    <string name="label_auto_decode">رمزگشایی خودکار</string>
+    <string name="label_enc_key">کلید رمزنگاری</string>
+    <string name="hint_enc_key">همان کلید تنظیم‌شده در قانون ارسال</string>
+    <string name="btn_save_key">ذخیره</string>
+    <string name="btn_paste">پیست</string>
+    <string name="btn_clear">پاک کردن</string>
+    <string name="label_encoded_input">پیام رمزنگاری‌شده</string>
+    <string name="hint_encoded_input">پیام رمزنگاری‌شده را اینجا paste یا share کنید</string>
+    <string name="btn_decode">رمزگشایی</string>
+    <string name="btn_copy_result">کپی</string>
+    <string name="btn_dismiss">بستن</string>
+    <string name="key_saved">کلید ذخیره شد</string>
+    <string name="copied">در کلیپبورد کپی شد</string>
+    <string name="status_input_received">✅ متن دریافت شد — رمزگشایی را بزنید</string>
+    <string name="decode_success">✅ رمزگشایی موفق</string>
+    <string name="decode_failed">❌ رمزگشایی ناموفق</string>
+    <string name="error_no_key">لطفاً ابتدا کلید رمزنگاری را وارد کنید.</string>
+    <string name="error_no_input">لطفاً یک پیام رمزنگاری‌شده وارد کنید.</string>
+    <string name="decode_error">رمزگشایی ناموفق: %s</string>
+</resources>

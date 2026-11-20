@@ -78,7 +78,9 @@ class SmsService : Service() {
             addAction(ACTION_PHONE_STATE_CHANGED)
             addAction(ACTION_BATTERY_LOW)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(smsReceiver, filter, RECEIVER_NOT_EXPORTED)
+        // SMS_RECEIVED_ACTION is a protected broadcast sent by the system, so the
+        // receiver must be EXPORTED; RECEIVER_NOT_EXPORTED silently drops it on API 33+.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(smsReceiver, filter, RECEIVER_EXPORTED)
         else @Suppress("UnspecifiedRegisterReceiverFlag") registerReceiver(smsReceiver, filter)
     }
 

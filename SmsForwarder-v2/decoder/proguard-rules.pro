@@ -1,0 +1,3 @@
+-keepattributes SourceFile,LineNumberTable
+-keep class com.google.gson.** { *; }
+-dontwarn com.google.gson.**
